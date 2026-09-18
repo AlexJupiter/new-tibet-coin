@@ -1,0 +1,13 @@
+cache/
+out/
+broadcast/
+
+.env
+.env.*
+!.env.example
+
+keystore/
+*.key
+*.keystore
+
+.DS_Store
