@@ -30,9 +30,27 @@ OpenZeppelin Contracts v5.6.0 supplies the standard token behavior.
 See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating sequence and
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
 
-## Sepolia test history
+## Sepolia test deployment
 
-The `TIBETLOCKED2` candidate has not yet been deployed. Superseded immutable test contracts:
+The current `TIBETLOCKED2` implementation was deployed and exercised on Sepolia on 28 September
+2026.
+
+| Property | Value |
+| --- | --- |
+| Network | Ethereum Sepolia (`11155111`) |
+| Token contract | [`0x285f8792392b4D90c10C235BDaF6525eDcB17364`](https://sepolia.etherscan.io/address/0x285f8792392b4D90c10C235BDaF6525eDcB17364#code) |
+| Foundation Safe | [`0x407A99ABbd7Ada3456944200d697aF7b0cf5443e`](https://sepolia.etherscan.io/address/0x407A99ABbd7Ada3456944200d697aF7b0cf5443e) |
+| Deployment transaction | [`0x49695321...2436998`](https://sepolia.etherscan.io/tx/0x49695321d1a022d6235d481b1ffca66754c834af40ed781a7aa429bfb2436998) |
+| Transfer-release transaction | [`0x48728d1b...f232215`](https://sepolia.etherscan.io/tx/0x48728d1bffd374cd74d09e3f373a682463c6e2600f2d8ffe6b4d4c2bcf232215) |
+| Source verification | Etherscan verified; Sourcify exact match |
+| Current transfer state | Permanently enabled |
+
+The test sequence confirmed that the Foundation Safe could distribute tokens while transfers were
+locked, recipient accounts could not transfer or burn, the Safe could release transfers through
+its multisig process, and recipient accounts could transfer after release. Because release is
+one-way, this particular test deployment cannot be returned to its locked state.
+
+Superseded immutable test contracts:
 
 - `TIBETLOCKED`: [`0x2c669404b2fdbdde12709283BB6170689F2b66e2`](https://sepolia.etherscan.io/address/0x2c669404b2fdbdde12709283BB6170689F2b66e2#code)
 - Restricted `TIBET`: [`0x121EDEfc0e2E582D7222CC7e18037b9c8475EF85`](https://sepolia.etherscan.io/address/0x121EDEfc0e2E582D7222CC7e18037b9c8475EF85#code)
@@ -47,8 +65,7 @@ The `TIBETLOCKED2` candidate has not yet been deployed. Superseded immutable tes
 - Metadata bytecode hash: IPFS
 
 ```sh
-git clone --branch transfer-restrictions-v2 --recurse-submodules \
-  https://github.com/AlexJupiter/new-tibet-coin.git
+git clone --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git
 cd new-tibet-coin
 forge fmt --check
 forge build --sizes
