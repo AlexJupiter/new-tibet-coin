@@ -6,10 +6,10 @@ import { NewTibetCoin } from "../src/NewTibetCoin.sol";
 
 contract DeployNewTibetCoin is Script {
     function run() external returns (NewTibetCoin token) {
-        address treasury = vm.envAddress("TREASURY_ADDRESS");
+        address foundationSafe = vm.envAddress("FOUNDATION_SAFE_ADDRESS");
 
         vm.startBroadcast();
-        token = new NewTibetCoin(treasury);
+        token = new NewTibetCoin(foundationSafe);
         vm.stopBroadcast();
     }
 }
