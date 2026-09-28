@@ -6,6 +6,8 @@ readonly FOUNDATION_SAFE_ADDRESS="${FOUNDATION_SAFE_ADDRESS:-0x407A99ABbd7Ada345
 readonly RPC_URL="${SEPOLIA_RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}"
 readonly KEYSTORE_PATH="${KEYSTORE_PATH:-${HOME}/.foundry/keystores/ntc-sepolia-deployer-v2}"
 
+export FOUNDATION_SAFE_ADDRESS
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 password_file=""
 
@@ -36,7 +38,7 @@ unset DEPLOY_PASSWORD
 
 cd "${repo_root}"
 
-FOUNDATION_SAFE_ADDRESS="${FOUNDATION_SAFE_ADDRESS}" forge script \
+forge script \
     script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
     --rpc-url "${RPC_URL}" \
     --keystore "${KEYSTORE_PATH}" \
