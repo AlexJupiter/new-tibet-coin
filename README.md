@@ -3,8 +3,8 @@
 Audit-candidate source for a fixed-supply ERC-20 with Foundation-controlled transfer activation
 and irreversible recipient lock-ups.
 
-> This branch is version 2 and has not been deployed. The existing Sepolia contract is the
-> immutable version 1 baseline and does not contain these transfer restrictions.
+> This branch is version 2. The current Sepolia test deployment uses the `TIBETLOCKED` symbol
+> and is listed below. Earlier immutable test deployments remain onchain but are superseded.
 
 ## Contract summary
 
@@ -40,6 +40,19 @@ provided by pinned OpenZeppelin Contracts dependencies.
 
 See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the state model and operational
 sequence.
+
+## Current Sepolia V2 test deployment
+
+- Contract: [`0x2c669404b2fdbdde12709283BB6170689F2b66e2`](https://sepolia.etherscan.io/address/0x2c669404b2fdbdde12709283BB6170689F2b66e2#code)
+- Deployment transaction: [`0x1eed62e2a5d17cc849de3059881afe3cc79d6a90d27eef29eb304887e13538ca`](https://sepolia.etherscan.io/tx/0x1eed62e2a5d17cc849de3059881afe3cc79d6a90d27eef29eb304887e13538ca)
+- Foundation Safe: `0x407A99ABbd7Ada3456944200d697aF7b0cf5443e`
+- Symbol: `TIBETLOCKED`
+- Source verification: Etherscan verified
+- Unrestricted transfers at deployment: disabled
+
+The earlier V2 test deployment with symbol `TIBET` at
+[`0x121EDEfc0e2E582D7222CC7e18037b9c8475EF85`](https://sepolia.etherscan.io/address/0x121EDEfc0e2E582D7222CC7e18037b9c8475EF85#code)
+is superseded for testing purposes.
 
 ## Existing Sepolia V1 baseline
 
