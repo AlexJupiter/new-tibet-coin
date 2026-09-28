@@ -1,6 +1,6 @@
 # New Tibet Coin (`TIBETLOCKED2`)
 
-Minimal fixed-supply ERC-20 with a [New Tibet Foundation]([url](https://newtibet.com/))-controlled, one-way transfer release.
+Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)-controlled, one-way transfer release.
 
 ## Contract summary
 
