@@ -1,4 +1,4 @@
-# New Tibet Coin (`TIBET`)
+# New Tibet Coin (`TIBETLOCKED`)
 
 Audit-candidate source for a fixed-supply ERC-20 with Foundation-controlled transfer activation
 and irreversible recipient lock-ups.
@@ -11,9 +11,9 @@ and irreversible recipient lock-ups.
 | Property | Value |
 | --- | --- |
 | Name | New Tibet Coin |
-| Symbol | `TIBET` |
+| Symbol | `TIBETLOCKED` |
 | Decimals | 18 |
-| Initial supply | 13,000,000,000 TIBET |
+| Initial supply | 13,000,000,000 TIBETLOCKED |
 | Future minting | None |
 | Upgradeability | None |
 | Initial token administrator | Constructor-supplied Foundation Safe |

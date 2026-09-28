@@ -70,7 +70,7 @@ contract NewTibetCoin is ERC20, ERC20Burnable, ERC20Permit, ERC20Votes {
     /// @param foundationSafe A deployed Foundation Safe that receives the complete initial supply
     ///        and becomes the initial token administrator and authorised distributor.
     constructor(address foundationSafe)
-        ERC20("New Tibet Coin", "TIBET")
+        ERC20("New Tibet Coin", "TIBETLOCKED")
         ERC20Permit("New Tibet Coin")
     {
         if (foundationSafe == address(0) || foundationSafe.code.length == 0) {
