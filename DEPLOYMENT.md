@@ -120,18 +120,52 @@ replace the independent external audit.
 ## 4. Validate the network and Safe
 
 Use a trusted authenticated Ethereum RPC endpoint. Do not place RPC credentials, private keys,
-keystore passwords or explorer API keys in the repository or command history.
+keystore passwords or explorer API keys in the repository or command history. First display the
+chain ID:
 
 ```sh
-export NTC_MAINNET_RPC_URL="<trusted Ethereum mainnet RPC URL>"
-export NTC_FOUNDATION_SAFE="<approved checksummed Foundation Safe address>"
-
-test "$(cast chain-id --rpc-url "$NTC_MAINNET_RPC_URL")" = "1"
-test "$(cast code "$NTC_FOUNDATION_SAFE" --rpc-url "$NTC_MAINNET_RPC_URL")" != "0x"
+cast chain-id --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
 ```
 
-Compare `NTC_FOUNDATION_SAFE` against the approved address character by character with a second
-person. Inspect the address in both Safe Wallet and a mainnet block explorer.
+The output must be exactly `1`. The Sepolia chain ID `11155111` is correct only during testing and
+must never be accepted for production.
+
+Confirm that contract code exists at the approved Safe address:
+
+```sh
+cast code "<APPROVED FOUNDATION SAFE ADDRESS>" \
+  --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
+```
+
+The result must be a long hexadecimal value beginning with `0x`, not only `0x`. This proves that a
+contract exists but does not prove that it is the intended Safe.
+
+Read the Safe owners and threshold directly:
+
+```sh
+cast call "<APPROVED FOUNDATION SAFE ADDRESS>" 'getOwners()(address[])' \
+  --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
+
+cast call "<APPROVED FOUNDATION SAFE ADDRESS>" 'getThreshold()(uint256)' \
+  --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
+```
+
+For the planned initial 3-of-5 production Safe, the first result must contain exactly the five
+approved owner addresses and the second must be `3`. Compare the Safe and every owner character by
+character with a second person. Confirm the same values and the absence of unexpected modules,
+guards or spending permissions in both the official Safe interface and a mainnet block explorer.
+Stop if the chain, code, address, owners, threshold or Safe settings differ.
+
+After those checks pass, store the two verified public values for the remaining commands in this
+runbook:
+
+```sh
+export NTC_MAINNET_RPC_URL="<TRUSTED ETHEREUM MAINNET RPC URL>"
+export NTC_FOUNDATION_SAFE="<APPROVED FOUNDATION SAFE ADDRESS>"
+```
+
+These variables are shorthand used repeatedly below. They last only for the current terminal
+session and do not deploy or change anything.
 
 ## 5. Simulate without broadcasting
 

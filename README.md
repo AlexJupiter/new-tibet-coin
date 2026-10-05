@@ -74,7 +74,7 @@ Sepolia. Never continue if the reported chain ID is different from the intended 
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v7 --recurse-submodules \
+git clone --branch audit-candidate-v8 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release
@@ -200,23 +200,83 @@ Every later command must be run from inside the `new-tibet-coin-release` folder.
 
 ### 2. Check the network and Foundation Safe
 
-Check the network. Replace the placeholder with the Foundation's trusted Ethereum mainnet RPC URL:
+#### Confirm the RPC network
+
+This check prevents deployment to the wrong blockchain. Replace the placeholder with the RPC URL
+that will be used for deployment:
 
 ```sh
-cast chain-id --rpc-url "<ETHEREUM MAINNET RPC URL>"
+cast chain-id --rpc-url "<RPC URL FOR INTENDED NETWORK>"
 ```
 
-The result must be `1`. Any other result means the terminal is connected to the wrong network.
+The command prints the network's numerical chain ID and nothing else. Expected results are:
 
-Check that a contract exists at the approved Foundation Safe address:
+```text
+Ethereum mainnet: 1
+Sepolia testing:  11155111
+```
+
+Your Sepolia test output should therefore be:
+
+```text
+11155111
+```
+
+For a production deployment, the result must be `1`. A result of `11155111` is correct only during
+Sepolia testing. Stop if the result does not match the intended network.
+
+#### Confirm that the Safe address contains a contract
+
+Use the Foundation Safe address from the same network as the RPC:
 
 ```sh
-cast code "<FOUNDATION SAFE ADDRESS>" --rpc-url "<ETHEREUM MAINNET RPC URL>"
+cast code "<SAFE ADDRESS ON INTENDED NETWORK>" \
+  --rpc-url "<RPC URL FOR INTENDED NETWORK>"
 ```
 
-The result must be a long value rather than only `0x`. Two people must compare the Safe address
-character by character with the Foundation's approved record. Also confirm its owners, threshold,
-modules, guards and fallback handler in the official Safe interface.
+This reads the executable contract code stored at that address. A normal Safe proxy produces a long
+hexadecimal value beginning with `0x`, for example:
+
+```text
+0x6080604052...<many more characters>
+```
+
+The exact long value does not need to match this shortened example. A result containing only `0x`
+means there is no contract at the address: it may be an ordinary wallet, a mistyped address or an
+address from the wrong network. Stop if the result is `0x`, empty, or an error.
+
+The token constructor performs this same basic code-presence check. A long result proves only that
+some contract exists; it does not prove that the contract is the official Foundation Safe or that
+its security settings are correct.
+
+#### Confirm the Safe owners and approval threshold
+
+Run:
+
+```sh
+cast call "<SAFE ADDRESS ON INTENDED NETWORK>" 'getOwners()(address[])' \
+  --rpc-url "<RPC URL FOR INTENDED NETWORK>"
+
+cast call "<SAFE ADDRESS ON INTENDED NETWORK>" 'getThreshold()(uint256)' \
+  --rpc-url "<RPC URL FOR INTENDED NETWORK>"
+```
+
+The first command must return exactly the owner addresses approved by the Foundation. The planned
+initial production Safe is 3-of-5, so it must return five approved addresses. The second command
+must return `3`. The current Sepolia training Safe is 2-of-3, so three owner addresses and a
+threshold of `2` are expected when testing that Safe. Its current expected output is:
+
+```text
+[0x71AF09966CBED4434ccA97c40Fa38B8083548B95,
+ 0x3bffB10F6F17F15164Fbc0416f1Bc42C56b2C191,
+ 0x548F3D5c4Ebf4A403ae57c2b427AcbE103872EBb]
+2
+```
+
+Two people must compare every owner and the Safe address character by character with the approved
+record. In the official Safe interface, also confirm the same network, owners and threshold, and
+confirm that no unexpected module, guard or spending permission is enabled. Stop if any value or
+setting differs.
 
 ### 3. Simulate the deployment
 

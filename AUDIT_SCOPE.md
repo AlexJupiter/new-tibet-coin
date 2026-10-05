@@ -3,7 +3,7 @@
 ## Frozen version
 
 The audit handoff is the exact commit referenced by the annotated Git tag
-`audit-candidate-v7`. A branch name or the latest `main` commit is not a sufficient scope
+`audit-candidate-v8`. A branch name or the latest `main` commit is not a sufficient scope
 identifier. The auditor and Foundation should both record the tag's resolved commit SHA before
 work begins.
 
