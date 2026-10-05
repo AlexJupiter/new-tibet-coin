@@ -185,26 +185,32 @@ Review the simulation with a second person. Confirm the constructor argument, to
 
 ## 6. Broadcast once
 
-Use a dedicated deployment account backed by the Foundation-approved signing device or encrypted
-Foundry keystore. Fund it only with the ETH reasonably required for deployment. The deployer
-receives no token privilege and can be retired afterward.
+Use a dedicated deployment account funded only with the ETH reasonably required for deployment.
+The deployer receives no tokens or token privilege and can be retired afterward.
 
-Example using a named Foundry keystore account:
+Ethereum cannot prove which type of device produced a valid signature. Hardware-wallet compliance
+must therefore be recorded and checked through the Foundation's operational process. The example
+uses a Ledger because the current Foundation policy requires hardware-wallet signing; `--ledger`
+tells Foundry to request the signature from that connected device. Use `--trezor` instead for an
+approved Trezor.
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   --rpc-url "$NTC_MAINNET_RPC_URL" \
-  --account <approved Foundry account name> \
+  --ledger \
+  --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
   --broadcast \
   --slow \
   -vvvv
 ```
 
-One operator prepares and reads the transaction; a second operator verifies the chain, Safe
-constructor argument and expected creation before the signer authorizes it. Record the deployment
-transaction hash and contract address immediately.
+The `--ledger` or `--trezor` option selects the signing interface; it is not an onchain verification
+claim. One operator prepares the transaction and a second verifies the chain, Safe constructor
+argument and expected creation before the signer authorizes it. Record the deployment transaction
+hash and contract address immediately. The post-deployment state and bytecode checks determine
+whether the correct contract was deployed.
 
 ## 7. Verify source and deployed state
 
