@@ -78,13 +78,32 @@ deployment record. The five submodule lines must contain these exact commit and 
 Each line must begin with a blank space. Stop if a line begins with `-`, `+` or `U`. Ignore the
 descriptive text in parentheses at the end of a line; the commit and folder are authoritative.
 
-Confirm the direct dependency versions and then run the build checks:
+Confirm the direct dependency versions:
 
 ```sh
 git -C lib/openzeppelin-contracts rev-parse HEAD
 git -C lib/openzeppelin-contracts tag --points-at HEAD
 git -C lib/forge-std rev-parse HEAD
 git -C lib/forge-std tag --points-at HEAD
+```
+
+The expected direct dependency results are OpenZeppelin commit
+`56a3de2cea907c9a500d32e70c275f68393b7ba6` at `v5.6.0` and forge-std commit
+`8e40513d678f392f398620b3ef2b418648b33e89` at `v1.11.0`.
+
+Run the following checks one at a time and save their complete output with the deployment manifest:
+
+| Command | Reason | Required result |
+| --- | --- | --- |
+| `forge --version` | Confirms the reviewed build-tool version. | First line is `forge Version: 1.5.1-stable`. |
+| `forge fmt --check` | Detects accidental Solidity formatting changes. | No output and no proposed change. |
+| `forge build --sizes` | Compiles with Solidity 0.8.37 and checks Ethereum code-size limits. | Successful build; `NewTibetCoin` shows runtime size `7,929` and creation-code size `10,953` bytes. |
+| `forge test -vvv` | Runs unit, fuzz and invariant tests. | 16 token tests and 4 invariant tests pass; none fail or are skipped. |
+| `slither . --config-file slither.config.json` | Scans for common Solidity vulnerabilities. | Final message ends with `0 result(s) found`. |
+
+Run the commands:
+
+```sh
 forge --version
 forge fmt --check
 forge build --sizes
@@ -92,10 +111,11 @@ forge test -vvv
 slither . --config-file slither.config.json
 ```
 
-The expected direct dependency results are OpenZeppelin commit
-`56a3de2cea907c9a500d32e70c275f68393b7ba6` at `v5.6.0` and forge-std commit
-`8e40513d678f392f398620b3ef2b418648b33e89` at `v1.11.0`. The expected Foundry version is
-`v1.5.1`. Save the command output with the deployment manifest.
+The detailed test output must show 1,000 runs for each fuzz test and 256 runs with 16,384 calls for
+each invariant. Solidity can print known deprecation warnings for files under `lib/forge-std` and a
+style note about the `foundationSafe` name. Stop for any compiler error, failed or skipped test,
+Slither finding, or other warning referring to `src/NewTibetCoin.sol`. Passing these checks does not
+replace the independent external audit.
 
 ## 4. Validate the network and Safe
 
