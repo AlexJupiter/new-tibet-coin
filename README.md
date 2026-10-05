@@ -42,10 +42,39 @@ In the commands below, text inside `<ANGLE BRACKETS>` is a placeholder. Replace 
 placeholder with the real value but keep the quotation marks. Run each command separately and check
 its result before continuing.
 
+### Suggested RPC endpoints
+
+An RPC endpoint connects the deployment commands to Ethereum. It never needs the deployer's private
+key or recovery phrase.
+
+For production, use a private, authenticated mainnet endpoint owned by the Foundation. Do not use a
+shared public RPC to broadcast the production deployment. Create a dedicated provider project, keep
+its API key out of the repository and have a second provider available for independent checks.
+
+| Network and use | Provider | RPC URL |
+| --- | --- | --- |
+| Mainnet production | [Alchemy](https://www.alchemy.com/docs/reference/node-supported-chains) | `https://eth-mainnet.g.alchemy.com/v2/<ALCHEMY API KEY>` |
+| Mainnet production alternative | [Infura](https://docs.metamask.io/metamask-connect/evm/guides/manage-networks/) | `https://mainnet.infura.io/v3/<INFURA API KEY>` |
+| Mainnet read-only cross-check | [PublicNode](https://ethereum.publicnode.com/) | `https://ethereum-rpc.publicnode.com` |
+| Sepolia testing, no account required | [PublicNode](https://ethereum.publicnode.com/) | `https://ethereum-sepolia-rpc.publicnode.com` |
+| Sepolia testing with a private endpoint | [Alchemy](https://www.alchemy.com/docs/reference/node-supported-chains) | `https://eth-sepolia.g.alchemy.com/v2/<ALCHEMY API KEY>` |
+| Sepolia testing alternative | [Infura](https://docs.metamask.io/metamask-connect/evm/guides/manage-networks/) | `https://sepolia.infura.io/v3/<INFURA API KEY>` |
+
+The repository's Sepolia deployment helper uses the PublicNode Sepolia endpoint by default. Confirm
+any RPC before using it:
+
+```sh
+cast chain-id --rpc-url "https://ethereum-rpc.publicnode.com"
+cast chain-id --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The first command must return `1` for Ethereum mainnet. The second must return `11155111` for
+Sepolia. Never continue if the reported chain ID is different from the intended network.
+
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v4 --recurse-submodules \
+git clone --branch audit-candidate-v5 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release
