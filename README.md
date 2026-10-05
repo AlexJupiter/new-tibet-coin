@@ -31,6 +31,145 @@ See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating seq
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
 The production launch procedure is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
+## Production deployment
+
+Do not deploy the current candidate to Ethereum mainnet until the external audit is complete, the
+auditor has reviewed any fixes, and the Foundation has approved the final name, symbol, Safe and
+release tag. Two people should perform and independently check the steps below. The complete
+operational checklist is in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+### 1. Check out the approved release
+
+Set `NTC_RELEASE_TAG` to the exact auditor-approved tag:
+
+```sh
+export NTC_RELEASE_TAG="audit-candidate-v3"
+
+git clone --branch "$NTC_RELEASE_TAG" --recurse-submodules \
+  https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
+cd new-tibet-coin-release
+
+test -z "$(git status --porcelain)"
+git rev-parse HEAD
+git submodule status --recursive
+forge --version
+forge fmt --check
+forge build --sizes
+forge test -vvv
+slither . --config-file slither.config.json
+```
+
+Record the displayed commit and submodule identifiers. They must match the deployment record
+approved by the Foundation.
+
+### 2. Set the deployment values
+
+Set the public addresses in the deployment terminal. Securely load `NTC_MAINNET_RPC_URL` and
+`ETHERSCAN_API_KEY` into the environment using the Foundation's approved credential process; do not
+place real credentials, private keys or recovery phrases in this repository or command history.
+
+```sh
+export NTC_FOUNDATION_SAFE="<approved Ethereum mainnet Foundation Safe>"
+export NTC_DEPLOYER_ADDRESS="<approved hardware-wallet deployer address>"
+
+test -n "$NTC_MAINNET_RPC_URL"
+test -n "$ETHERSCAN_API_KEY"
+```
+
+Check that the RPC is connected to Ethereum mainnet and that the approved Safe is already deployed:
+
+```sh
+test "$(cast chain-id --rpc-url "$NTC_MAINNET_RPC_URL")" = "1"
+test "$(cast code "$NTC_FOUNDATION_SAFE" --rpc-url "$NTC_MAINNET_RPC_URL")" != "0x"
+```
+
+Two people must compare `NTC_FOUNDATION_SAFE` character by character with the Foundation's approved
+Safe address. Also confirm the Safe owners, threshold, modules, guards and fallback handler in the
+official Safe interface.
+
+### 3. Simulate the deployment
+
+This performs a complete rehearsal without publishing a transaction:
+
+```sh
+EXPECTED_CHAIN_ID=1 \
+FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --rpc-url "$NTC_MAINNET_RPC_URL" \
+  -vvvv
+```
+
+Review the output with the second checker. Confirm the network, Safe address, token name, symbol and
+13,000,000,000-token supply before continuing.
+
+### 4. Broadcast the deployment once
+
+The deployer must be an approved hardware-wallet account funded only with enough ETH for the
+deployment fee. It receives no tokens or authority over the token. The example below uses a Ledger;
+use `--trezor` instead of `--ledger` for an approved Trezor.
+
+```sh
+EXPECTED_CHAIN_ID=1 \
+FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --rpc-url "$NTC_MAINNET_RPC_URL" \
+  --ledger \
+  --sender "$NTC_DEPLOYER_ADDRESS" \
+  --broadcast \
+  --slow \
+  -vvvv
+```
+
+Verify the transaction details on the hardware-wallet screen before approving them. Save the
+resulting deployment transaction hash and token contract address.
+
+### 5. Verify the published source
+
+Set the deployed address, encode the approved Safe as the constructor argument and verify the source
+on both Etherscan and Sourcify:
+
+```sh
+export NTC_TOKEN_ADDRESS="<deployed token contract address>"
+export NTC_CONSTRUCTOR_ARGS="$(cast abi-encode 'constructor(address)' "$NTC_FOUNDATION_SAFE")"
+
+forge verify-contract \
+  --verifier etherscan \
+  --etherscan-api-key "$ETHERSCAN_API_KEY" \
+  --chain mainnet \
+  --watch \
+  --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
+  "$NTC_TOKEN_ADDRESS" \
+  src/NewTibetCoin.sol:NewTibetCoin
+
+forge verify-contract \
+  --verifier sourcify \
+  --chain mainnet \
+  --watch \
+  --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
+  "$NTC_TOKEN_ADDRESS" \
+  src/NewTibetCoin.sol:NewTibetCoin
+```
+
+### 6. Confirm the deployed state
+
+```sh
+cast call "$NTC_TOKEN_ADDRESS" 'name()(string)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'symbol()(string)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'totalSupply()(uint256)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'foundationSafe()(address)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'balanceOf(address)(uint256)' "$NTC_FOUNDATION_SAFE" \
+  --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'transfersEnabled()(bool)' --rpc-url "$NTC_MAINNET_RPC_URL"
+```
+
+The total supply and Safe balance must both be `13000000000000000000000000000` base units,
+`foundationSafe()` must be the approved Safe, and `transfersEnabled()` must be `false`. Do not
+distribute tokens or announce the address if any result differs. An incorrect immutable deployment
+must be abandoned and investigated.
+
+Deployment does not enable transfers. The Foundation Safe should call `enableTransfers()` only after
+allocations and launch preparations are complete. This later action is global and irreversible.
+
 ## Sepolia test deployment
 
 The current `TIBETLOCKED2` implementation was deployed and exercised on Sepolia on 28 September
