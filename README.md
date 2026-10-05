@@ -29,6 +29,7 @@ OpenZeppelin Contracts v5.6.0 supplies the standard token behavior.
 
 See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating sequence and
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
+The production launch procedure is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Sepolia test deployment
 
@@ -58,11 +59,13 @@ Superseded immutable test contracts:
 
 ## Reproducible build
 
-- Solidity: `0.8.35+commit.47b9dedd`
+- Solidity: `0.8.37+commit.f401782d`
 - EVM version: `cancun`
 - Optimizer: enabled, 200 runs
 - Via IR: disabled
 - Metadata bytecode hash: IPFS
+- Foundry: `v1.5.1`
+- Slither: `0.11.6`
 
 ```sh
 git clone --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git
@@ -70,7 +73,12 @@ cd new-tibet-coin
 forge fmt --check
 forge build --sizes
 forge test -vvv
+forge coverage --report summary --no-match-coverage "(script|test)/"
+slither . --config-file slither.config.json
 ```
+
+The current unit, fuzz and invariant suites reach 100% line, statement, branch and function
+coverage for `src/NewTibetCoin.sol`.
 
 ## Security warning
 

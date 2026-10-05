@@ -19,7 +19,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.5.1
 
       - name: Check formatting
         run: forge fmt --check
@@ -29,3 +29,30 @@ jobs:
 
       - name: Run tests
         run: forge test -vvv
+
+      - name: Measure production contract coverage
+        run: forge coverage --report summary --no-match-coverage "(script|test)/"
+
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Slither
+        run: pip install slither-analyzer==0.11.6
+
+      - name: Run Slither
+        run: slither . --config-file slither.config.json

@@ -1,0 +1,195 @@
+# Production deployment runbook
+
+This runbook is for the canonical Ethereum mainnet deployment of New Tibet Coin. It is a
+two-person operational checklist, not an authorization to deploy. The Foundation must approve the
+final audit commit, Safe configuration, deployment parameters and launch timing before any
+transaction is broadcast.
+
+The Sepolia helper in `scripts/deploy-sepolia.sh` is test-only and must not be used for mainnet.
+
+## 1. Freeze the release
+
+Before scheduling deployment:
+
+- Resolve all audit findings and obtain the auditor's fix review.
+- Decide the final token name and symbol. The current candidate uses `New Tibet Coin` and
+  `TIBETLOCKED2`; any production change must be included in the reviewed commit.
+- Create a final signed or annotated release tag from the auditor-approved commit.
+- Record the resolved commit SHA, submodule SHAs, compiler settings and audit report.
+- Confirm that CI, unit tests, fuzz tests, invariant tests and Slither all pass on that commit.
+- Do not deploy from a working tree with local or untracked changes.
+
+The deployment manifest must record these final values:
+
+| Parameter | Required value |
+| --- | --- |
+| Network | Ethereum mainnet |
+| Chain ID | `1` |
+| Release tag and commit | To be approved after audit fix review |
+| Foundation Safe | To be approved and recorded before deployment |
+| Safe threshold and owners | To be approved and independently checked |
+| Solidity | `0.8.37` |
+| EVM version | `cancun` |
+| Optimizer | Enabled, 200 runs |
+| OpenZeppelin Contracts | `v5.6.0` at the pinned submodule commit |
+
+## 2. Prepare the Foundation Safe
+
+Deploy the intended Safe on Ethereum mainnet before deploying the token. The token constructor
+rejects addresses without code, but it cannot prove that a contract is an official or correctly
+configured Safe.
+
+Two Foundation representatives must independently verify and record:
+
+- The checksummed Safe address and Ethereum mainnet network.
+- The Safe singleton/proxy implementation is an official supported deployment.
+- Every owner address and the approval threshold.
+- All enabled modules, guards and the fallback handler.
+- That no unexpected spending limit, module or queued transaction exists.
+- That signers use the Foundation-approved hardware wallets and backup procedure.
+
+The Safe address is immutable in the token. A mistake cannot be repaired or migrated by the token.
+
+## 3. Build from a clean checkout
+
+Replace `<FINAL_TAG>` with the auditor-approved release tag:
+
+```sh
+git clone --branch <FINAL_TAG> --recurse-submodules \
+  https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
+cd new-tibet-coin-release
+
+test -z "$(git status --porcelain)"
+git rev-parse HEAD
+git submodule status --recursive
+forge --version
+forge fmt --check
+forge build --sizes
+forge test -vvv
+slither . --config-file slither.config.json
+```
+
+The expected Foundry version is `v1.5.1`. Save the command output with the deployment manifest.
+
+## 4. Validate the network and Safe
+
+Use a trusted authenticated Ethereum RPC endpoint. Do not place RPC credentials, private keys,
+keystore passwords or explorer API keys in the repository or command history.
+
+```sh
+export NTC_MAINNET_RPC_URL="<trusted Ethereum mainnet RPC URL>"
+export NTC_FOUNDATION_SAFE="<approved checksummed Foundation Safe address>"
+
+test "$(cast chain-id --rpc-url "$NTC_MAINNET_RPC_URL")" = "1"
+test "$(cast code "$NTC_FOUNDATION_SAFE" --rpc-url "$NTC_MAINNET_RPC_URL")" != "0x"
+```
+
+Compare `NTC_FOUNDATION_SAFE` against the approved address character by character with a second
+person. Inspect the address in both Safe Wallet and a mainnet block explorer.
+
+## 5. Simulate without broadcasting
+
+The deployment script requires the expected chain ID and performs post-deployment assertions for
+the immutable Safe, supply, Safe balance and locked transfer state.
+
+```sh
+EXPECTED_CHAIN_ID=1 \
+FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --rpc-url "$NTC_MAINNET_RPC_URL" \
+  -vvvv
+```
+
+Review the simulation with a second person. Confirm the constructor argument, token metadata,
+13,000,000,000-token supply and absence of any unexpected call.
+
+## 6. Broadcast once
+
+Use a dedicated deployment account backed by the Foundation-approved signing device or encrypted
+Foundry keystore. Fund it only with the ETH reasonably required for deployment. The deployer
+receives no token privilege and can be retired afterward.
+
+Example using a named Foundry keystore account:
+
+```sh
+EXPECTED_CHAIN_ID=1 \
+FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --rpc-url "$NTC_MAINNET_RPC_URL" \
+  --account <approved Foundry account name> \
+  --broadcast \
+  --slow \
+  -vvvv
+```
+
+One operator prepares and reads the transaction; a second operator verifies the chain, Safe
+constructor argument and expected creation before the signer authorizes it. Record the deployment
+transaction hash and contract address immediately.
+
+## 7. Verify source and deployed state
+
+Verify the exact release source on both Etherscan and Sourcify. Constructor arguments are the
+ABI-encoded Foundation Safe address.
+
+```sh
+export NTC_TOKEN_ADDRESS="<deployed token address>"
+export NTC_CONSTRUCTOR_ARGS="$(cast abi-encode 'constructor(address)' "$NTC_FOUNDATION_SAFE")"
+
+forge verify-contract \
+  --verifier etherscan \
+  --chain mainnet \
+  --watch \
+  --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
+  "$NTC_TOKEN_ADDRESS" \
+  src/NewTibetCoin.sol:NewTibetCoin
+
+forge verify-contract \
+  --verifier sourcify \
+  --chain mainnet \
+  --watch \
+  --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
+  "$NTC_TOKEN_ADDRESS" \
+  src/NewTibetCoin.sol:NewTibetCoin
+```
+
+Read and independently compare every deployment invariant:
+
+```sh
+cast call "$NTC_TOKEN_ADDRESS" 'name()(string)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'symbol()(string)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'totalSupply()(uint256)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'foundationSafe()(address)' --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'balanceOf(address)(uint256)' "$NTC_FOUNDATION_SAFE" \
+  --rpc-url "$NTC_MAINNET_RPC_URL"
+cast call "$NTC_TOKEN_ADDRESS" 'transfersEnabled()(bool)' --rpc-url "$NTC_MAINNET_RPC_URL"
+```
+
+Expected results include:
+
+- `totalSupply()` and the Safe balance both equal
+  `13000000000000000000000000000` base units.
+- `foundationSafe()` equals the approved Safe exactly.
+- `transfersEnabled()` is `false`.
+- Etherscan's runtime bytecode and constructor arguments match the audited build.
+
+Do not distribute tokens if any check differs. Since the token is immutable, abandon an incorrect
+deployment and investigate before deploying a replacement.
+
+## 8. Distribution and irreversible release
+
+Before release:
+
+- Only the Safe may transfer or burn tokens.
+- Reconcile every recipient and amount against the approved allocation records.
+- Test a recipient's attempted transfer and confirm it reverts with `TransfersDisabled()`.
+- Treat allowances and permits as live commitments: they become usable immediately upon release.
+
+To release, the Safe must call the token's `enableTransfers()` function with zero ETH. The calldata
+is `0xaf35c6c7`. Every signer must verify the token address, zero value, `CALL` operation and calldata.
+
+The release is global and irreversible. Execute it only after allocations are reconciled, exchange
+and communications teams are ready, and the Foundation has completed its approval process.
+
+After execution, record the transaction hash, confirm `transfersEnabled()` returns `true`, and test
+ordinary holder transfers. Publish the final contract address, verified source, audit report,
+deployment transaction, release transaction and operational contacts.
