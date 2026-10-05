@@ -189,28 +189,55 @@ Use a dedicated deployment account funded only with the ETH reasonably required 
 The deployer receives no tokens or token privilege and can be retired afterward.
 
 Ethereum cannot prove which type of device produced a valid signature. Hardware-wallet compliance
-must therefore be recorded and checked through the Foundation's operational process. The example
-uses a Ledger because the current Foundation policy requires hardware-wallet signing; `--ledger`
-tells Foundry to request the signature from that connected device. Use `--trezor` instead for an
-approved Trezor.
+must therefore be recorded and checked through the Foundation's operational process.
+
+Before running the command, connect the approved Ledger or Trezor to MetaMask using MetaMask's
+hardware-wallet connection. Select the exact approved deployer account and intended Ethereum
+network. Never import or type the hardware wallet's recovery phrase or private key into MetaMask.
+Keep the device connected and unlocked, and close other wallet applications that could compete for
+the device connection.
+
+Record the deployer's pending nonce and calculate the address that its next transaction will create:
+
+```sh
+cast nonce "<HARDWARE-WALLET DEPLOYER ADDRESS>" --block pending \
+  --rpc-url "$NTC_MAINNET_RPC_URL"
+
+cast compute-address "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+  --nonce "<NONCE DISPLAYED BY THE PREVIOUS COMMAND>"
+```
+
+Record the resulting contract address. Send no other transaction from the deployer before the
+deployment, because doing so changes its nonce and therefore the expected address.
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   --rpc-url "$NTC_MAINNET_RPC_URL" \
-  --ledger \
+  --browser \
   --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
   --broadcast \
   --slow \
   -vvvv
 ```
 
-The `--ledger` or `--trezor` option selects the signing interface; it is not an onchain verification
-claim. One operator prepares the transaction and a second verifies the chain, Safe constructor
-argument and expected creation before the signer authorizes it. Record the deployment transaction
-hash and contract address immediately. The post-deployment state and bytecode checks determine
-whether the correct contract was deployed.
+The `--browser` option opens Foundry's local browser signer. Connect MetaMask when prompted;
+MetaMask will pass the signing request to its connected hardware wallet. Confirm that MetaMask is
+using the approved deployer on Ethereum mainnet and describes a contract deployment with zero ETH
+value. Check the maximum fee against the agreed limit.
+
+The device may display many screens of raw contract-creation bytecode. It is not realistic to
+validate that bytecode visually on the hardware wallet. The device's role is to protect the private
+key and authorize the exact transaction bytes; it does not replace source review. Before approval,
+the two operators must instead rely on the clean audited release, reproducible build and security
+checks, the reviewed no-broadcast simulation, the verified chain and Safe, and the recorded nonce
+and expected contract address.
+
+After approval, record the deployment transaction hash and contract address immediately. The
+deployed address must equal the precomputed address. That address check does not prove the code, so
+do not recognise the deployment or distribute tokens until the source, bytecode and state checks in
+the next section all pass.
 
 ## 7. Verify source and deployed state
 
@@ -236,7 +263,20 @@ forge verify-contract \
   --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
   "$NTC_TOKEN_ADDRESS" \
   src/NewTibetCoin.sol:NewTibetCoin
+
+forge verify-bytecode \
+  --verifier etherscan \
+  --chain mainnet \
+  --rpc-url "$NTC_MAINNET_RPC_URL" \
+  --encoded-constructor-args "$NTC_CONSTRUCTOR_ARGS" \
+  "$NTC_TOKEN_ADDRESS" \
+  src/NewTibetCoin.sol:NewTibetCoin
 ```
+
+Both source verifiers must report success, Sourcify must report an exact match, and
+`forge verify-bytecode` must confirm both creation and runtime bytecode. These checks establish that
+the unreadable bytecode approved on the hardware wallet corresponds to the reviewed source and Safe
+constructor argument.
 
 Read and independently compare every deployment invariant:
 
