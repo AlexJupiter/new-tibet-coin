@@ -7,9 +7,11 @@ The token has two states controlled by one irreversible boolean.
 `transfersEnabled == false`
 
 - The Foundation Safe holds the initial supply.
-- The Safe can distribute tokens to recipients.
+- The Safe can distribute or burn its own tokens.
 - Recipients own their balances and may delegate voting power.
-- No other address can transfer, `transferFrom`, burn or `burnFrom` tokens.
+- Recipients may create approvals and EIP-2612 permits, but the approved spender cannot move tokens.
+- No other address can transfer, `transferFrom`, burn or `burnFrom` tokens, including through a
+  zero-value transfer.
 
 ## Released phase
 
@@ -17,6 +19,7 @@ The Foundation Safe calls `enableTransfers()` once.
 
 - `transfersEnabled` becomes `true` permanently.
 - Every holder can use standard ERC-20 transfers and burns immediately.
+- Allowances and permits created before release become usable immediately.
 - There is no pause, reversal, administrator migration, distributor registry or individual lock.
 
 ## Foundation operating sequence

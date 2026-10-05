@@ -3,10 +3,12 @@
 set -Eeuo pipefail
 
 readonly FOUNDATION_SAFE_ADDRESS="${FOUNDATION_SAFE_ADDRESS:-0x407A99ABbd7Ada3456944200d697aF7b0cf5443e}"
+readonly EXPECTED_CHAIN_ID=11155111
 readonly RPC_URL="${SEPOLIA_RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}"
 readonly KEYSTORE_PATH="${KEYSTORE_PATH:-${HOME}/.foundry/keystores/ntc-sepolia-deployer-v2}"
 
 export FOUNDATION_SAFE_ADDRESS
+export EXPECTED_CHAIN_ID
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 password_file=""
