@@ -74,7 +74,7 @@ Sepolia. Never continue if the reported chain ID is different from the intended 
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v8 --recurse-submodules \
+git clone --branch audit-candidate-v9 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release
@@ -297,9 +297,18 @@ Review the output with the second checker. Confirm the network, Safe address, to
 
 ### 4. Broadcast the deployment once
 
-The deployer must be an approved hardware-wallet account funded only with enough ETH for the
-deployment fee. It receives no tokens or authority over the token. The example below uses a Ledger;
-use `--trezor` instead of `--ledger` if the approved device is a Trezor.
+The deployment transaction must be signed by the deployer account. The blockchain records the
+deployer address and signature, but it cannot reveal or prove whether the signature came from a
+Ledger, Trezor or software wallet. Hardware-wallet compliance is therefore an off-chain Foundation
+process, not an onchain check.
+
+The command below uses a Ledger because the Foundation's current security policy requires
+production signing with a hardware wallet. Here, `--ledger` has a real technical function: it tells
+Foundry to ask the connected Ledger for the signature instead of loading a private key on the
+computer. Use `--trezor` instead if the Foundation-approved signing device is a Trezor.
+
+The deployer should hold only enough ETH for the network fee. It receives no tokens and has no
+authority over the token after deployment.
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
@@ -313,8 +322,21 @@ forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   -vvvv
 ```
 
-Verify the transaction details on the hardware-wallet screen before approving them. Save the
-resulting deployment transaction hash and token contract address.
+The important options mean:
+
+| Option | Meaning |
+| --- | --- |
+| `--ledger` | Requests the signature from a connected Ledger. It does not prove hardware-wallet use to anyone afterward. |
+| `--sender` | Identifies the public deployer address. It does not reveal a private key. |
+| `--broadcast` | Sends the simulated deployment transaction to Ethereum. Without this option, nothing is published. |
+| `--slow` | Waits for confirmation instead of submitting later transactions in parallel. |
+| `-vvvv` | Displays detailed logs for the deployment record and troubleshooting. |
+
+Foundry should request confirmation from the connected device and then display a successful
+transaction hash and the new token contract address. Stop if the device shows an unexpected
+network, address or transaction, or if Foundry reports a failure. Save the transaction hash and
+contract address. The post-deployment checks in Step 6—not the choice of signing device—prove that
+the correct token was deployed to the correct Safe.
 
 ### 5. Verify the published source
 
