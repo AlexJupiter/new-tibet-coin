@@ -74,7 +74,7 @@ Sepolia. Never continue if the reported chain ID is different from the intended 
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v6 --recurse-submodules \
+git clone --branch audit-candidate-v7 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release
@@ -119,15 +119,82 @@ v5.6.0
 v1.11.0
 ```
 
-Only continue when every value matches. Then run the build and security checks:
+Only continue when every value matches. Then run each build and security check separately.
+
+#### Confirm the Foundry version
 
 ```sh
 forge --version
+```
+
+This proves that the deployment uses the Foundry version fixed in the audit configuration. The
+first output line must be:
+
+```text
+forge Version: 1.5.1-stable
+```
+
+Stop if the version is different.
+
+#### Check Solidity formatting
+
+```sh
 forge fmt --check
+```
+
+This proves that the Solidity files have the reviewed formatting and have not been accidentally
+edited. Success normally produces no output and returns to the terminal prompt. Stop if it displays
+a proposed formatting change or an error.
+
+#### Compile the contracts and check their sizes
+
+```sh
 forge build --sizes
+```
+
+This compiles the token using Solidity `0.8.37` and displays the deployed and creation-code sizes.
+The output must report a successful compiler run and include this `NewTibetCoin` row:
+
+```text
+NewTibetCoin | 7,929 | 10,953 | 16,647 | 38,199
+```
+
+The four numbers are runtime size, creation-code size and their remaining limits, in bytes. They
+show that the contract is below Ethereum's size limits. A repeated build can instead say that no
+files changed and compilation was skipped; the size table must still appear.
+
+Solidity can print deprecation warnings for files under `lib/forge-std` and a style note suggesting
+that `foundationSafe` use capital letters. Those known dependency and naming messages do not change
+the contract. Stop for any compiler error or any other warning referring to `src/NewTibetCoin.sol`.
+
+#### Run all automated tests
+
+```sh
 forge test -vvv
+```
+
+This runs the unit, permit, voting, burn, fuzz and stateful invariant tests. The final summary must
+show exactly:
+
+```text
+NewTibetCoinInvariantTest | 4 | 0 | 0
+NewTibetCoinTest          | 16 | 0 | 0
+```
+
+The columns mean passed, failed and skipped. The detailed output must also show 1,000 runs for each
+fuzz test and 256 runs with 16,384 calls for each invariant. Stop if any test fails or is skipped.
+
+#### Run Slither security analysis
+
+```sh
 slither . --config-file slither.config.json
 ```
+
+This scans the contracts for common Solidity vulnerabilities and unsafe patterns. The final line
+must end with `0 result(s) found`. Stop and investigate if Slither reports any result or error.
+
+Save the output from all five checks with the deployment record. Passing these automated checks is
+required, but it does not replace the independent external audit.
 
 Every later command must be run from inside the `new-tibet-coin-release` folder.
 
