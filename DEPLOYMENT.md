@@ -52,16 +52,39 @@ The Safe address is immutable in the token. A mistake cannot be repaired or migr
 
 ## 3. Build from a clean checkout
 
-Replace `<FINAL_TAG>` with the auditor-approved release tag:
+Replace `FINAL_AUDITOR_APPROVED_TAG` inside the quotation marks with the approved release tag:
 
 ```sh
-git clone --branch <FINAL_TAG> --recurse-submodules \
+git clone --branch "FINAL_AUDITOR_APPROVED_TAG" --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 cd new-tibet-coin-release
 
-test -z "$(git status --porcelain)"
+git status --short
 git rev-parse HEAD
 git submodule status --recursive
+```
+
+`git status --short` must display nothing. The release commit must match the Foundation's approved
+deployment record. The five submodule lines must contain these exact commit and folder pairs:
+
+```text
+8e40513d678f392f398620b3ef2b418648b33e89 lib/forge-std
+56a3de2cea907c9a500d32e70c275f68393b7ba6 lib/openzeppelin-contracts
+232ff9ba8194e406967f52ecc5cb52ed764209e9 lib/openzeppelin-contracts/lib/erc4626-tests
+3b20d60d14b343ee4f908cb8079495c07f5e8981 lib/openzeppelin-contracts/lib/forge-std
+7328abe100445fc53885c21d0e713b95293cf14c lib/openzeppelin-contracts/lib/halmos-cheatcodes
+```
+
+Each line must begin with a blank space. Stop if a line begins with `-`, `+` or `U`. Ignore the
+descriptive text in parentheses at the end of a line; the commit and folder are authoritative.
+
+Confirm the direct dependency versions and then run the build checks:
+
+```sh
+git -C lib/openzeppelin-contracts rev-parse HEAD
+git -C lib/openzeppelin-contracts tag --points-at HEAD
+git -C lib/forge-std rev-parse HEAD
+git -C lib/forge-std tag --points-at HEAD
 forge --version
 forge fmt --check
 forge build --sizes
@@ -69,7 +92,10 @@ forge test -vvv
 slither . --config-file slither.config.json
 ```
 
-The expected Foundry version is `v1.5.1`. Save the command output with the deployment manifest.
+The expected direct dependency results are OpenZeppelin commit
+`56a3de2cea907c9a500d32e70c275f68393b7ba6` at `v5.6.0` and forge-std commit
+`8e40513d678f392f398620b3ef2b418648b33e89` at `v1.11.0`. The expected Foundry version is
+`v1.5.1`. Save the command output with the deployment manifest.
 
 ## 4. Validate the network and Safe
 

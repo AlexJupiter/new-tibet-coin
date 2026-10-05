@@ -74,7 +74,7 @@ Sepolia. Never continue if the reported chain ID is different from the intended 
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v5 --recurse-submodules \
+git clone --branch audit-candidate-v6 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release
@@ -82,6 +82,46 @@ cd new-tibet-coin-release
 git status --short
 git rev-parse HEAD
 git submodule status --recursive
+```
+
+`git status --short` must display nothing. Record the commit displayed by `git rev-parse HEAD` and
+compare it with the commit shown for the approved GitHub tag.
+
+The five lines from `git submodule status --recursive` must contain these exact commit and folder
+pairs:
+
+```text
+8e40513d678f392f398620b3ef2b418648b33e89 lib/forge-std
+56a3de2cea907c9a500d32e70c275f68393b7ba6 lib/openzeppelin-contracts
+232ff9ba8194e406967f52ecc5cb52ed764209e9 lib/openzeppelin-contracts/lib/erc4626-tests
+3b20d60d14b343ee4f908cb8079495c07f5e8981 lib/openzeppelin-contracts/lib/forge-std
+7328abe100445fc53885c21d0e713b95293cf14c lib/openzeppelin-contracts/lib/halmos-cheatcodes
+```
+
+Each output line must begin with a blank space. Stop if a line begins with `-`, `+` or `U`. Text in
+parentheses at the end of a line is only Git's descriptive label and can be ignored.
+
+Run these commands to confirm the two direct dependency versions explicitly:
+
+```sh
+git -C lib/openzeppelin-contracts rev-parse HEAD
+git -C lib/openzeppelin-contracts tag --points-at HEAD
+git -C lib/forge-std rev-parse HEAD
+git -C lib/forge-std tag --points-at HEAD
+```
+
+They must display, in the same order:
+
+```text
+56a3de2cea907c9a500d32e70c275f68393b7ba6
+v5.6.0
+8e40513d678f392f398620b3ef2b418648b33e89
+v1.11.0
+```
+
+Only continue when every value matches. Then run the build and security checks:
+
+```sh
 forge --version
 forge fmt --check
 forge build --sizes
@@ -89,9 +129,7 @@ forge test -vvv
 slither . --config-file slither.config.json
 ```
 
-`git status --short` must display nothing. Record the commit and submodule identifiers displayed by
-the next two commands. They must match the Foundation's approved deployment record. Every later
-command must be run from inside the `new-tibet-coin-release` folder.
+Every later command must be run from inside the `new-tibet-coin-release` folder.
 
 ### 2. Check the network and Foundation Safe
 
