@@ -302,20 +302,48 @@ deployer address and signature, but it cannot reveal or prove whether the signat
 Ledger, Trezor or software wallet. Hardware-wallet compliance is therefore an off-chain Foundation
 process, not an onchain check.
 
-The command below uses a Ledger because the Foundation's current security policy requires
-production signing with a hardware wallet. Here, `--ledger` has a real technical function: it tells
-Foundry to ask the connected Ledger for the signature instead of loading a private key on the
-computer. Use `--trezor` instead if the Foundation-approved signing device is a Trezor.
+Connect the approved Ledger or Trezor to MetaMask before running the command:
+
+1. In MetaMask, choose the option to add or connect a hardware-wallet account. Do not import the
+   hardware wallet's recovery phrase or private key.
+2. Select the exact Foundation-approved deployer address and connect it to MetaMask.
+3. Select the intended Ethereum network in MetaMask and compare its chain and selected account with
+   the deployment record.
+4. Keep the device connected and unlocked. Close any other wallet application that may try to use
+   the same device.
+
+The command uses Foundry's `--browser` interface. Foundry opens a local browser page and asks
+MetaMask to connect. MetaMask then passes the signing request to the connected hardware wallet.
+This avoids Foundry's unreliable direct `--ledger` and `--trezor` interfaces while keeping the
+private key inside the hardware wallet.
 
 The deployer should hold only enough ETH for the network fee. It receives no tokens and has no
 authority over the token after deployment.
+
+Immediately before broadcasting, record the deployer's pending nonce:
+
+```sh
+cast nonce "<HARDWARE-WALLET DEPLOYER ADDRESS>" --block pending \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>"
+```
+
+The output is a number such as `0`. Use that exact number to calculate the contract address that
+this deployment should create:
+
+```sh
+cast compute-address "<HARDWARE-WALLET DEPLOYER ADDRESS>" --nonce <NONCE FROM PREVIOUS COMMAND>
+```
+
+Record the resulting address. Do not send any other transaction from the deployer between this
+check and the deployment, because another transaction would consume the recorded nonce and change
+the expected contract address.
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="<FOUNDATION SAFE ADDRESS>" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   --rpc-url "<ETHEREUM MAINNET RPC URL>" \
-  --ledger \
+  --browser \
   --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
   --broadcast \
   --slow \
@@ -326,17 +354,36 @@ The important options mean:
 
 | Option | Meaning |
 | --- | --- |
-| `--ledger` | Requests the signature from a connected Ledger. It does not prove hardware-wallet use to anyone afterward. |
+| `--browser` | Opens Foundry's local browser signer so the connected MetaMask account can sign. MetaMask must already be connected to the approved hardware wallet. |
 | `--sender` | Identifies the public deployer address. It does not reveal a private key. |
 | `--broadcast` | Sends the simulated deployment transaction to Ethereum. Without this option, nothing is published. |
 | `--slow` | Waits for confirmation instead of submitting later transactions in parallel. |
 | `-vvvv` | Displays detailed logs for the deployment record and troubleshooting. |
 
-Foundry should request confirmation from the connected device and then display a successful
-transaction hash and the new token contract address. Stop if the device shows an unexpected
-network, address or transaction, or if Foundry reports a failure. Save the transaction hash and
-contract address. The post-deployment checks in Step 6—not the choice of signing device—prove that
-the correct token was deployed to the correct Safe.
+Foundry should open a local browser page. Connect MetaMask, confirm that its selected account is the
+recorded deployer and approve the request in MetaMask. MetaMask should describe the request as a
+contract deployment with zero ETH value. Check the selected network, deployer, ETH value and
+maximum fee before continuing.
+
+The hardware-wallet screen may then display many pages of raw contract-creation bytecode. That
+bytecode is not realistically human-verifiable on the small device screen. Do not treat scrolling
+through it as a meaningful source-code review. The hardware wallet protects the signing key and
+confirms that its account authorized the exact bytes; the following controls establish what those
+bytes are intended to do:
+
+- deploy only from the clean, auditor-approved release checked in Step 1;
+- pass every build, test and Slither check and review the no-broadcast simulation;
+- have a second person verify the network, Safe, deployer, expected contract address, zero ETH value
+  and reasonable maximum fee before device approval; and
+- verify the mined bytecode, published source and complete contract state before the Foundation
+  recognises the deployment or distributes any tokens.
+
+The device may still require approval of every bytecode screen. Complete those prompts only after
+the checks above pass. Foundry should then display a successful transaction hash and the new token
+contract address. The new address must equal the address calculated from the deployer nonce. Stop
+if it differs or if Foundry reports a failure. Save both addresses and the transaction hash. The
+calculated address confirms the deployer and nonce, but the post-deployment checks prove which code
+and constructor state were actually deployed.
 
 ### 5. Verify the published source
 
@@ -367,7 +414,21 @@ forge verify-contract \
   --constructor-args "<ENCODED SAFE VALUE>" \
   "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
   src/NewTibetCoin.sol:NewTibetCoin
+
+forge verify-bytecode \
+  --verifier etherscan \
+  --etherscan-api-key "<ETHERSCAN API KEY>" \
+  --chain mainnet \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>" \
+  --encoded-constructor-args "<ENCODED SAFE VALUE>" \
+  "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
+  src/NewTibetCoin.sol:NewTibetCoin
 ```
+
+The two source-verification commands must report success, and Sourcify should report an exact match.
+`forge verify-bytecode` must confirm that both the creation and runtime bytecode match the reviewed
+source and encoded Safe constructor argument. This is the practical check for the raw bytecode that
+could not be read meaningfully on the hardware-wallet screen.
 
 ### 6. Confirm the deployed state
 
