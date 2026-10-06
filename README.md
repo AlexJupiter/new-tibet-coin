@@ -471,7 +471,7 @@ Then it's important in the test deployment to check that the transfers can be en
 4. Input the ERC-20 contract address that was just deployed
 5. Choose the method "enableTransfers" <img width="1780" height="1136" alt="image" src="https://github.com/user-attachments/assets/8fbdacd5-bc33-49f5-956c-8a0886be3517" />
 6. Execute the transaction
-7. Try again to send the ERC-20 token to a new address and you should be able to
+7. Try again to send the ERC-20 token, from an account other than the test multi-sig, to a new address and you should be able to
 
 ## Sepolia test deployment
 
