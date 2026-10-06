@@ -461,6 +461,18 @@ must be abandoned and investigated.
 Deployment does not enable transfers. The Foundation Safe should call `enableTransfers()` only after
 allocations and launch preparations are complete. This later action is global and irreversible.
 
+## Checking Disabled Transfers / Enabling transfers
+After a test deployment, it's important to check that token transfers are disabled. The easiest way to do this is to distribute some of the ERC-20 from the test multi-sig to a different account. From this other account, then try and send this ERC-20 token to another other account and you should receive an error and it to be impossible to transfer the token elsewhere. 
+
+Then it's important in the test deployment to check that the transfers can be enabled at a later date. This feature was developed to enable distribution of tokens to team members and investors before the ICO date. To simulate the Foundation's actions on ICO date:
+1. Go the the Safe UI for the multi-sig used for testing purposes
+2. Head to "New Transaction" in the top left
+3. Choose "Transaction Builder" at the bottom
+4. Input the ERC-20 contract address that was just deployed
+5. Choose the method "enableTransfer" <img width="1780" height="1136" alt="image" src="https://github.com/user-attachments/assets/8fbdacd5-bc33-49f5-956c-8a0886be3517" />
+6. Execute the transaction
+7. Try again to send the ERC-20 token to a new address and you should be able to
+
 ## Sepolia test deployment
 
 The current `TIBETLOCKED2` implementation was deployed and exercised on Sepolia on 28 September
