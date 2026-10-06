@@ -7,7 +7,7 @@ Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)
 | Property | Value |
 | --- | --- |
 | Name | New Tibet Coin |
-| Symbol | `TIBETLOCKED2` |
+| Symbol | `TIBETLOCKED2` (any changes from `TIBET` are for testing purposes before mainnet deployment) |
 | Decimals | 18 |
 | Initial supply | 13,000,000,000 TIBETLOCKED2 |
 | Initial holder | Constructor-supplied Foundation Safe |
