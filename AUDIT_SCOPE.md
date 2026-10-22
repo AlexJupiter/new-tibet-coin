@@ -21,10 +21,11 @@ fix review before a final release tag is created.
 | forge-std | `v1.11.0` (`8e40513d678f392f398620b3ef2b418648b33e89`) |
 | Foundry | `v1.5.1` |
 
-The release-candidate symbol is `TIBET`. The `sepolia/tibettest` rehearsal branch changes that
-symbol to `TIBETTEST` and updates only the matching metadata-test assertion. Because changing the
-symbol changes creation bytecode, the Sepolia contract is functionally equivalent but is not a
-byte-for-byte copy of the release candidate.
+The release-candidate symbol is `TIBET`. The Sepolia rehearsal and production deployment must use
+the exact same approved release tag, source code, compiler settings, dependencies and deployment
+script. There is no separate Sepolia contract variant. Only network-specific deployment inputs may
+differ: RPC URL, expected chain ID, Foundation Safe address and deployer address. Record those
+inputs and the resulting deployment addresses for both networks.
 
 ## In scope
 
