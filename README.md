@@ -1,4 +1,4 @@
-# New Tibet Coin (`TIBETTEST1`)
+# New Tibet Coin (`TIBET`)
 
 Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)-controlled, one-way transfer release.
 
@@ -7,9 +7,9 @@ Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)
 | Property | Value |
 | --- | --- |
 | Name | New Tibet Coin |
-| Symbol | `TIBETTEST1` (test symbol; the final mainnet symbol remains subject to Foundation approval and audit) |
+| Symbol | `TIBET` (release candidate) |
 | Decimals | 18 |
-| Initial supply | 13,000,000,000 TIBETTEST1 |
+| Initial supply | 13,000,000,000 TIBET |
 | Initial holder | Constructor-supplied Foundation Safe |
 | Future minting | None |
 | Upgradeability | None |
@@ -31,9 +31,9 @@ See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating seq
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
 The production launch procedure is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-## Sepolia `TIBETTEST1` test deployment
+## Sepolia `TIBETTEST` test deployment
 
-This procedure deploys the current `TIBETTEST1` test contract to Ethereum Sepolia. It is separate
+This procedure deploys the `TIBETTEST` test contract to Ethereum Sepolia. It is separate
 from the production procedure below. Do not use `audit-candidate-v9` for this test because that
 immutable tag contains the earlier `TIBETLOCKED2` contract.
 
@@ -43,10 +43,11 @@ result differs from the stated expectation.
 
 ### 1. Check out and test the correct code
 
-Clone the current `main` branch after the `TIBETTEST1` change has been merged:
+Clone the dedicated Sepolia branch. It is based on the `TIBET` release candidate and changes only
+the contract symbol plus its matching metadata-test assertion:
 
 ```sh
-git clone --branch main --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
+git clone --branch sepolia/tibettest --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
 cd new-tibet-coin-sepolia
 ```
 
@@ -65,11 +66,12 @@ may begin with `-`, `+` or `U`.
 Confirm that both the contract and test expect the new symbol:
 
 ```sh
-grep -n 'TIBETTEST1' src/NewTibetCoin.sol test/NewTibetCoin.t.sol
+grep -n '"TIBETTEST"' src/NewTibetCoin.sol test/NewTibetCoin.t.sol
 ```
 
-The output must contain the constructor symbol in `src/NewTibetCoin.sol` and the matching symbol
-assertion in `test/NewTibetCoin.t.sol`. Stop if either file still contains `TIBETLOCKED2`.
+The output must contain exactly two relevant results: the constructor symbol in
+`src/NewTibetCoin.sol` and the matching assertion in `test/NewTibetCoin.t.sol`. Stop if either
+value is not exactly `TIBETTEST`.
 
 Run all build and security checks:
 
@@ -244,7 +246,7 @@ cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfersEnabled()(bool)' \
 The expected results are:
 
 - Name: `New Tibet Coin`
-- Symbol: `TIBETTEST1`
+- Symbol: `TIBETTEST`
 - Total supply: `13000000000000000000000000000`
 - Foundation Safe: `0x407A99ABbd7Ada3456944200d697aF7b0cf5443e`
 - Safe balance: `13000000000000000000000000000` before any distribution
@@ -312,7 +314,7 @@ Sepolia. Never continue if the reported chain ID is different from the intended 
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v9 --recurse-submodules \
+git clone --branch audit-candidate-v10 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release
