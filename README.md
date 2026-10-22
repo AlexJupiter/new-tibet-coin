@@ -254,21 +254,287 @@ The expected results are:
 
 Stop and abandon the test deployment if any immutable value is wrong.
 
-### 7. Test the one-way transfer release
+### 7. Prepare three test accounts while transfers are disabled
 
-1. From the Sepolia Safe, send a small number of tokens to a test account.
-2. From that account, attempt to transfer tokens to a second account. The transaction must fail
-   while `transfersEnabled()` is `false`.
-3. In the Safe Transaction Builder, enter the deployed token address and select
+The token starts with transfers disabled and can never be disabled again after release. Complete
+Steps 7–10 before calling `enableTransfers()`.
+
+Prepare three ordinary EOA test accounts controlled by the testers:
+
+- **Token holder:** receives tokens from the Safe and signs the permit and delegation.
+- **Permit spender:** receives the permit and attempts `transferFrom`.
+- **Second recipient:** receives tokens only after release.
+
+Do not use the Safe itself as the permit signer. A Safe contract cannot produce a normal EOA
+EIP-2612 signature; it uses ordinary `approve` transactions instead.
+
+From the Sepolia Safe, send exactly 10 `TIBETTEST` to the token holder. Safe displays may accept
+`10` tokens, while raw contract calls use `10000000000000000000` base units. Confirm:
+
+```sh
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'balanceOf(address)(uint256)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfersEnabled()(bool)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The balance must be `10000000000000000000` and the transfer state must still be `false`.
+
+Attempt a direct transfer of one token from the holder:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfer(address,uint256)' \
+  "<SECOND RECIPIENT ADDRESS>" 1000000000000000000 \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<TOKEN HOLDER ADDRESS>"
+```
+
+The call must revert while transfers are disabled. MetaMask may refuse to submit it after gas
+estimation detects the revert; that is expected. Recheck both balances and confirm that neither
+changed.
+
+### 8. Test burning while transfers are disabled
+
+First attempt to burn one token from the ordinary holder:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'burn(uint256)' \
+  1000000000000000000 \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<TOKEN HOLDER ADDRESS>"
+```
+
+This must revert because an ordinary holder cannot reduce its balance while locked. Confirm that
+the holder still owns 10 tokens and that `totalSupply()` has not changed.
+
+Now prove that the Foundation Safe can burn its own tokens during the locked distribution phase:
+
+1. Open the Sepolia Safe and choose **New transaction → Transaction Builder**.
+2. Enter the deployed token address.
+3. Select `burn(uint256)`.
+4. Enter `1000000000000000000`, meaning exactly one token.
+5. Obtain the required Safe approvals and execute the transaction.
+
+Then run:
+
+```sh
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'totalSupply()(uint256)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfersEnabled()(bool)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The total supply must now be `12999999999000000000000000000`, exactly one token below the
+initial supply, while `transfersEnabled()` must remain `false`. Burning is irreversible.
+
+### 9. Test EIP-2612 permit while transfers are disabled
+
+A permit should successfully create an allowance while locked, but that allowance must not let
+the spender move the holder's tokens until release.
+
+Read the holder's current permit nonce:
+
+```sh
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'nonces(address)(uint256)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+Create a temporary local file named `permit.json` with the following content. Replace every
+address placeholder and replace `<NONCE RETURNED ABOVE>` with the exact nonce:
+
+```json
+{
+  "types": {
+    "EIP712Domain": [
+      { "name": "name", "type": "string" },
+      { "name": "version", "type": "string" },
+      { "name": "chainId", "type": "uint256" },
+      { "name": "verifyingContract", "type": "address" }
+    ],
+    "Permit": [
+      { "name": "owner", "type": "address" },
+      { "name": "spender", "type": "address" },
+      { "name": "value", "type": "uint256" },
+      { "name": "nonce", "type": "uint256" },
+      { "name": "deadline", "type": "uint256" }
+    ]
+  },
+  "primaryType": "Permit",
+  "domain": {
+    "name": "New Tibet Coin",
+    "version": "1",
+    "chainId": 11155111,
+    "verifyingContract": "<DEPLOYED TOKEN CONTRACT ADDRESS>"
+  },
+  "message": {
+    "owner": "<TOKEN HOLDER ADDRESS>",
+    "spender": "<PERMIT SPENDER ADDRESS>",
+    "value": "1000000000000000000",
+    "nonce": "<NONCE RETURNED ABOVE>",
+    "deadline": "2000000000"
+  }
+}
+```
+
+The deadline is a future Unix timestamp used only for this Sepolia test. Sign the typed data with
+the token-holder account through MetaMask:
+
+```sh
+cast wallet sign --data --from-file permit.json \
+  --browser \
+  --from "<TOKEN HOLDER ADDRESS>"
+```
+
+MetaMask must show the `New Tibet Coin` permit, Sepolia chain ID, deployed token address, spender
+and one-token value. Reject the request if any field differs. Copy the returned 132-character
+signature beginning with `0x`.
+
+Run these commands in the same zsh or bash terminal to split the signature into the values required
+by `permit()`:
+
+```sh
+PERMIT_SIGNATURE="<PASTE THE 0x SIGNATURE>"
+R="0x${PERMIT_SIGNATURE:2:64}"
+S="0x${PERMIT_SIGNATURE:66:64}"
+V=$(cast to-dec "0x${PERMIT_SIGNATURE:130:2}")
+if [ "$V" -lt 27 ]; then V=$((V + 27)); fi
+printf 'v=%s\nr=%s\ns=%s\n' "$V" "$R" "$S"
+```
+
+`V` must be `27` or `28`; `R` and `S` must each be 66-character hexadecimal values including
+`0x`. Submit the permit. The submitting account can be the permit spender because the holder has
+already authorized it with the signature:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
+  'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  "<PERMIT SPENDER ADDRESS>" \
+  1000000000000000000 \
+  2000000000 \
+  "$V" "$R" "$S" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<PERMIT SPENDER ADDRESS>"
+```
+
+Confirm the allowance and nonce:
+
+```sh
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'allowance(address,address)(uint256)' \
+  "<TOKEN HOLDER ADDRESS>" "<PERMIT SPENDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'nonces(address)(uint256)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The allowance must be `1000000000000000000`, and the nonce must have increased by exactly one.
+
+From the permit spender, attempt to use that allowance while transfers are still disabled:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
+  'transferFrom(address,address,uint256)' \
+  "<TOKEN HOLDER ADDRESS>" "<SECOND RECIPIENT ADDRESS>" 1000000000000000000 \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<PERMIT SPENDER ADDRESS>"
+```
+
+This must revert. Confirm that the holder still has 10 tokens, the recipient has zero, and the
+one-token allowance remains available. This proves that permit cannot bypass the transfer lock.
+
+### 10. Test voting while transfers are disabled
+
+Before delegation, `getVotes()` should normally return zero for the holder even though it owns
+tokens. Delegate the holder's voting power to itself:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'delegate(address)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<TOKEN HOLDER ADDRESS>"
+```
+
+Confirm the delegate and current votes:
+
+```sh
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'delegates(address)(address)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'getVotes(address)(uint256)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'numCheckpoints(address)(uint32)' \
+  "<TOKEN HOLDER ADDRESS>" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+`delegates()` must return the holder address, `getVotes()` must return
+`10000000000000000000`, and `numCheckpoints()` must be at least `1`. Voting delegation must not
+change token balances or enable transfers.
+
+### 11. Release transfers and repeat the restricted operations
+
+Only after every locked-state test above has passed:
+
+1. In the Safe Transaction Builder, enter the deployed token address and select
    `enableTransfers()` with no arguments.
-4. Obtain the required Safe approvals and execute the transaction.
-5. Confirm that `transfersEnabled()` now returns `true`.
-6. Repeat the test-account transfer. It must now succeed.
+2. Obtain the required Safe approvals and execute the transaction.
+3. Confirm that `transfersEnabled()` now returns `true`.
 
-`enableTransfers()` is irreversible, even on Sepolia. Record the deployment transaction, contract
-address, commit SHA, deployer, Safe, source-verification links, failed locked-transfer attempt,
-release transaction and successful post-release transfer. Add the completed deployment to the
-historical Sepolia table later in this README.
+Repeat the permit spender's `transferFrom` command from Step 9. It must now succeed, reducing the
+holder's balance and votes from 10 tokens to 9 and consuming the one-token allowance.
+
+Send one additional token directly from the holder:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfer(address,uint256)' \
+  "<SECOND RECIPIENT ADDRESS>" 1000000000000000000 \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<TOKEN HOLDER ADDRESS>"
+```
+
+This must succeed, leaving the holder with eight tokens and eight votes.
+
+Finally, burn one token from the ordinary holder:
+
+```sh
+cast send "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'burn(uint256)' \
+  1000000000000000000 \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --from "<TOKEN HOLDER ADDRESS>"
+```
+
+This must succeed. The expected final values are:
+
+- Holder balance: `7000000000000000000`
+- Holder current votes: `7000000000000000000`
+- Permit allowance: `0`
+- Total supply: `12999999998000000000000000000`
+- Transfers enabled: `true`
+
+Check those values using the `balanceOf`, `getVotes`, `allowance`, `totalSupply` and
+`transfersEnabled` read commands shown above.
+
+`enableTransfers()` and both burns are irreversible, even on Sepolia. Record the deployment
+transaction, contract address, commit SHA, deployer, Safe, source-verification links, failed
+locked transfer and burn attempts, successful permit transaction, failed locked `transferFrom`,
+delegation transaction, release transaction and successful post-release transfer and burn.
+Add the completed deployment to the historical Sepolia table later in this README.
 
 
 ## Production deployment
@@ -669,17 +935,11 @@ must be abandoned and investigated.
 Deployment does not enable transfers. The Foundation Safe should call `enableTransfers()` only after
 allocations and launch preparations are complete. This later action is global and irreversible.
 
-## Checking Disabled Transfers / Enabling transfers
-After a test deployment, it's important to check that token transfers are disabled. The easiest way to do this is to distribute some of the ERC-20 from the test multi-sig to a different account. From this other account, then try and send this ERC-20 token to another other account and you should receive an error and it to be impossible to transfer the token elsewhere. 
+## Transfer-restriction testing
 
-Then it's important in the test deployment to check that the transfers can be enabled at a later date. This feature was developed to enable distribution of tokens to team members and investors before the ICO date. To simulate the Foundation's actions on ICO date:
-1. Go the the Safe UI for the multi-sig used for testing purposes
-2. Head to "New Transaction" in the top left
-3. Choose "Transaction Builder" at the bottom
-4. Input the ERC-20 contract address that was just deployed
-5. Choose the method "enableTransfers" <img width="1780" height="1136" alt="image" src="https://github.com/user-attachments/assets/8fbdacd5-bc33-49f5-956c-8a0886be3517" />
-6. Execute the transaction
-7. Try again to send the ERC-20 token, from an account other than the test multi-sig, to a new address and you should be able to
+The complete live test for locked transfers, burning, EIP-2612 permit, vote delegation and the
+irreversible release is contained in Steps 7–11 of the Sepolia procedure above. Do not perform
+those irreversible test transactions against the production token.
 
 ## Previous Sepolia test deployment
 
