@@ -3,7 +3,7 @@
 ## Frozen version
 
 The audit handoff is the exact commit referenced by the annotated Git tag
-`audit-candidate-v9`. A branch name or the latest `main` commit is not a sufficient scope
+`audit-candidate-v10`. A branch name or the latest `main` commit is not a sufficient scope
 identifier. The auditor and Foundation should both record the tag's resolved commit SHA before
 work begins.
 
@@ -21,9 +21,10 @@ fix review before a final release tag is created.
 | forge-std | `v1.11.0` (`8e40513d678f392f398620b3ef2b418648b33e89`) |
 | Foundry | `v1.5.1` |
 
-The current candidate symbol is `TIBETLOCKED2`. If the production name or symbol will differ,
-that decision should be made before the audit begins or the exact post-audit diff must be accepted
-in writing by the auditor.
+The release-candidate symbol is `TIBET`. The `sepolia/tibettest` rehearsal branch changes that
+symbol to `TIBETTEST` and updates only the matching metadata-test assertion. Because changing the
+symbol changes creation bytecode, the Sepolia contract is functionally equivalent but is not a
+byte-for-byte copy of the release candidate.
 
 ## In scope
 
