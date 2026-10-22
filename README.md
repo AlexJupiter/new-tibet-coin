@@ -37,7 +37,7 @@ The current test candidate uses the symbol `TIBETTEST1`. After this change has b
 out `main` for the next Sepolia deployment:
 
 ```sh
-git clone --branch main --recurse-submodules \\
+git clone --branch main --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
 
 cd new-tibet-coin-sepolia
