@@ -31,11 +31,15 @@ See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating seq
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
 The production launch procedure is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-## Sepolia `TIBETTEST` test deployment
+## Sepolia `TIBET` test deployment
 
-This procedure deploys the `TIBETTEST` test contract to Ethereum Sepolia. It is separate
-from the production procedure below. Do not use `audit-candidate-v9` for this test because that
-immutable tag contains the earlier `TIBETLOCKED2` contract.
+Sepolia and Ethereum mainnet must use the exact same approved release tag, contract source,
+`TIBET` symbol, compiler settings, dependencies and deployment script. Only the network-specific
+inputs change: RPC URL, expected chain ID, Foundation Safe address and deployer address.
+
+The current planned release tag is `audit-candidate-v10`. Create that tag from the final approved
+commit after all audit-preparation changes are merged, then use that same immutable tag for both
+the Sepolia rehearsal and the production deployment. Do not deploy from a branch name.
 
 Text inside `<ANGLE BRACKETS>` is a placeholder. Replace the entire placeholder with the real
 value, while keeping quotation marks where shown. Run each command separately and stop if its
@@ -43,11 +47,10 @@ result differs from the stated expectation.
 
 ### 1. Check out and test the correct code
 
-Clone the dedicated Sepolia branch. It is based on the `TIBET` release candidate and changes only
-the contract symbol plus its matching metadata-test assertion:
+Clone the same approved release tag that will be used for production:
 
 ```sh
-git clone --branch sepolia/tibettest --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
+git clone --branch audit-candidate-v10 --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
 cd new-tibet-coin-sepolia
 ```
 
@@ -63,15 +66,15 @@ git submodule status --recursive
 the test-deployment record. The submodule command must list initialized dependencies and no line
 may begin with `-`, `+` or `U`.
 
-Confirm that both the contract and test expect the new symbol:
+Confirm that both the contract and test expect the shared release symbol:
 
 ```sh
-grep -n '"TIBETTEST"' src/NewTibetCoin.sol test/NewTibetCoin.t.sol
+grep -n '"TIBET"' src/NewTibetCoin.sol test/NewTibetCoin.t.sol
 ```
 
 The output must contain exactly two relevant results: the constructor symbol in
 `src/NewTibetCoin.sol` and the matching assertion in `test/NewTibetCoin.t.sol`. Stop if either
-value is not exactly `TIBETTEST`.
+value is not exactly `TIBET`.
 
 Run all build and security checks:
 
@@ -246,7 +249,7 @@ cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfersEnabled()(bool)' \
 The expected results are:
 
 - Name: `New Tibet Coin`
-- Symbol: `TIBETTEST`
+- Symbol: `TIBET`
 - Total supply: `13000000000000000000000000000`
 - Foundation Safe: `0x407A99ABbd7Ada3456944200d697aF7b0cf5443e`
 - Safe balance: `13000000000000000000000000000` before any distribution
@@ -268,7 +271,7 @@ Prepare three ordinary EOA test accounts controlled by the testers:
 Do not use the Safe itself as the permit signer. A Safe contract cannot produce a normal EOA
 EIP-2612 signature; it uses ordinary `approve` transactions instead.
 
-From the Sepolia Safe, send exactly 10 `TIBETTEST` to the token holder. Safe displays may accept
+From the Sepolia Safe, send exactly 10 `TIBET` to the token holder. Safe displays may accept
 `10` tokens, while raw contract calls use `10000000000000000000` base units. Confirm:
 
 ```sh
