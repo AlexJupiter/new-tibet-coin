@@ -26,7 +26,7 @@ contract NewTibetCoinTest is Test {
 
     function test_MetadataAndInitialState() public view {
         assertEq(token.name(), "New Tibet Coin");
-        assertEq(token.symbol(), "TIBETLOCKED2");
+        assertEq(token.symbol(), "TIBETTEST1");
         assertEq(token.decimals(), 18);
         assertEq(token.INITIAL_SUPPLY(), 13_000_000_000 ether);
         assertEq(token.totalSupply(), 13_000_000_000 ether);
