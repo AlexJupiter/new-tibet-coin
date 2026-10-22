@@ -37,9 +37,9 @@ Sepolia and Ethereum mainnet must use the exact same approved release tag, contr
 `TIBET` symbol, compiler settings, dependencies and deployment script. Only the network-specific
 inputs change: RPC URL, expected chain ID, Foundation Safe address and deployer address.
 
-The current planned release tag is `audit-candidate-v10`. Create that tag from the final approved
-commit after all audit-preparation changes are merged, then use that same immutable tag for both
-the Sepolia rehearsal and the production deployment. Do not deploy from a branch name.
+The approved immutable release tag is `audit-candidate-v10`, pointing to commit
+`16a9d2ad5356351acf1ccbf2ad35c9ece15c9679`. Use this exact tag for both the Sepolia rehearsal
+and the production deployment. Do not deploy from a branch name.
 
 Text inside `<ANGLE BRACKETS>` is a placeholder. Replace the entire placeholder with the real
 value, while keeping quotation marks where shown. Run each command separately and stop if its
