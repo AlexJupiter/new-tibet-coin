@@ -1,4 +1,4 @@
-# New Tibet Coin (`TIBETLOCKED2`)
+# New Tibet Coin (`TIBETTEST1`)
 
 Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)-controlled, one-way transfer release.
 
@@ -7,9 +7,9 @@ Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)
 | Property | Value |
 | --- | --- |
 | Name | New Tibet Coin |
-| Symbol | `TIBETLOCKED2` (any changes from `TIBET` are for testing purposes before mainnet deployment) |
+| Symbol | `TIBETTEST1` (test symbol; the final mainnet symbol remains subject to Foundation approval and audit) |
 | Decimals | 18 |
-| Initial supply | 13,000,000,000 TIBETLOCKED2 |
+| Initial supply | 13,000,000,000 TIBETTEST1 |
 | Initial holder | Constructor-supplied Foundation Safe |
 | Future minting | None |
 | Upgradeability | None |
@@ -30,6 +30,23 @@ OpenZeppelin Contracts v5.6.0 supplies the standard token behavior.
 See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating sequence and
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
 The production launch procedure is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+## Sepolia test checkout
+
+The current test candidate uses the symbol `TIBETTEST1`. After this change has been merged, check
+out `main` for the next Sepolia deployment:
+
+```sh
+git clone --branch main --recurse-submodules \\
+  https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
+
+cd new-tibet-coin-sepolia
+forge test -vvv
+```
+
+Confirm that every test passes before deploying. Do not use `audit-candidate-v9` for this test:
+that tag is an immutable record of the earlier `TIBETLOCKED2` audit candidate. The production
+checkout below deliberately continues to use the frozen tag until a new audit candidate is approved.
 
 ## Production deployment
 
@@ -473,9 +490,9 @@ Then it's important in the test deployment to check that the transfers can be en
 6. Execute the transaction
 7. Try again to send the ERC-20 token, from an account other than the test multi-sig, to a new address and you should be able to
 
-## Sepolia test deployment
+## Previous Sepolia test deployment
 
-The current `TIBETLOCKED2` implementation was deployed and exercised on Sepolia on 28 September
+The previous `TIBETLOCKED2` implementation was deployed and exercised on Sepolia on 28 September
 2026.
 
 | Property | Value |
