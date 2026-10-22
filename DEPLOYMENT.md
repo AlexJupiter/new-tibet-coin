@@ -13,7 +13,7 @@ Before scheduling deployment:
 
 - Resolve all audit findings and obtain the auditor's fix review.
 - Decide the final token name and symbol. The current candidate uses `New Tibet Coin` and
-  `TIBETLOCKED2`; any production change must be included in the reviewed commit.
+  `TIBET`; any production change must be included in the reviewed commit.
 - Create a final signed or annotated release tag from the auditor-approved commit.
 - Record the resolved commit SHA, submodule SHAs, compiler settings and audit report.
 - Confirm that CI, unit tests, fuzz tests, invariant tests and Slither all pass on that commit.
