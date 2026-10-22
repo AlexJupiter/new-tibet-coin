@@ -296,20 +296,9 @@ its API key out of the repository and have a second provider available for indep
 | Mainnet production | [Alchemy](https://www.alchemy.com/docs/reference/node-supported-chains) | `https://eth-mainnet.g.alchemy.com/v2/<ALCHEMY API KEY>` |
 | Mainnet production alternative | [Infura](https://docs.metamask.io/metamask-connect/evm/guides/manage-networks/) | `https://mainnet.infura.io/v3/<INFURA API KEY>` |
 | Mainnet read-only cross-check | [PublicNode](https://ethereum.publicnode.com/) | `https://ethereum-rpc.publicnode.com` |
-| Sepolia testing, no account required | [PublicNode](https://ethereum.publicnode.com/) | `https://ethereum-sepolia-rpc.publicnode.com` |
-| Sepolia testing with a private endpoint | [Alchemy](https://www.alchemy.com/docs/reference/node-supported-chains) | `https://eth-sepolia.g.alchemy.com/v2/<ALCHEMY API KEY>` |
-| Sepolia testing alternative | [Infura](https://docs.metamask.io/metamask-connect/evm/guides/manage-networks/) | `https://sepolia.infura.io/v3/<INFURA API KEY>` |
 
-The repository's Sepolia deployment helper uses the PublicNode Sepolia endpoint by default. Confirm
-any RPC before using it:
-
-```sh
-cast chain-id --rpc-url "https://ethereum-rpc.publicnode.com"
-cast chain-id --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
-```
-
-The first command must return `1` for Ethereum mainnet. The second must return `11155111` for
-Sepolia. Never continue if the reported chain ID is different from the intended network.
+The authenticated RPC selected for production is checked explicitly in Step 2. PublicNode is listed
+only for independent read-only checks; do not use it to broadcast the production deployment.
 
 ### 1. Check out the approved release
 
@@ -442,36 +431,22 @@ Every later command must be run from inside the `new-tibet-coin-release` folder.
 
 #### Confirm the RPC network
 
-This check prevents deployment to the wrong blockchain. Replace the placeholder with the RPC URL
-that will be used for deployment:
+This check prevents deployment to the wrong blockchain. Use the exact authenticated Ethereum
+mainnet RPC URL selected for production:
 
 ```sh
-cast chain-id --rpc-url "<RPC URL FOR INTENDED NETWORK>"
+cast chain-id --rpc-url "<ETHEREUM MAINNET RPC URL>"
 ```
 
-The command prints the network's numerical chain ID and nothing else. Expected results are:
-
-```text
-Ethereum mainnet: 1
-Sepolia testing:  11155111
-```
-
-Your Sepolia test output should therefore be:
-
-```text
-11155111
-```
-
-For a production deployment, the result must be `1`. A result of `11155111` is correct only during
-Sepolia testing. Stop if the result does not match the intended network.
+The command must print exactly `1`. Stop immediately if it returns any other chain ID or an error.
 
 #### Confirm that the Safe address contains a contract
 
-Use the Foundation Safe address from the same network as the RPC:
+Use the Foundation's approved Ethereum mainnet Safe address:
 
 ```sh
-cast code "<SAFE ADDRESS ON INTENDED NETWORK>" \
-  --rpc-url "<RPC URL FOR INTENDED NETWORK>"
+cast code "<FOUNDATION SAFE ADDRESS>" \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>"
 ```
 
 This reads the executable contract code stored at that address. A normal Safe proxy produces a long
@@ -494,24 +469,17 @@ its security settings are correct.
 Run:
 
 ```sh
-cast call "<SAFE ADDRESS ON INTENDED NETWORK>" 'getOwners()(address[])' \
-  --rpc-url "<RPC URL FOR INTENDED NETWORK>"
+cast call "<FOUNDATION SAFE ADDRESS>" 'getOwners()(address[])' \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>"
 
-cast call "<SAFE ADDRESS ON INTENDED NETWORK>" 'getThreshold()(uint256)' \
-  --rpc-url "<RPC URL FOR INTENDED NETWORK>"
+cast call "<FOUNDATION SAFE ADDRESS>" 'getThreshold()(uint256)' \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>"
 ```
 
-The first command must return exactly the owner addresses approved by the Foundation. The planned
-initial production Safe is 3-of-5, so it must return five approved addresses. The second command
-must return `3`. The current Sepolia training Safe is 2-of-3, so three owner addresses and a
-threshold of `2` are expected when testing that Safe. Its current expected output is:
-
-```text
-[0x71AF09966CBED4434ccA97c40Fa38B8083548B95,
- 0x3bffB10F6F17F15164Fbc0416f1Bc42C56b2C191,
- 0x548F3D5c4Ebf4A403ae57c2b427AcbE103872EBb]
-2
-```
+The first command must return exactly the five Ethereum mainnet owner addresses approved by the
+Foundation. The second command must return `3`, confirming the planned 3-of-5 production threshold.
+Stop if the production Safe has not yet been created or if either result differs from the
+Foundation's approved record.
 
 Two people must compare every owner and the Safe address character by character with the approved
 record. In the official Safe interface, also confirm the same network, owners and threshold, and
