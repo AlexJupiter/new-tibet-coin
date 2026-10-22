@@ -1,4 +1,4 @@
-# New Tibet Coin (`TIBETTEST1`)
+# New Tibet Coin (`TIBET`)
 
 Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)-controlled, one-way transfer release.
 
@@ -7,9 +7,9 @@ Minimal fixed-supply ERC-20 with a [New Tibet Foundation](https://newtibet.com/)
 | Property | Value |
 | --- | --- |
 | Name | New Tibet Coin |
-| Symbol | `TIBETTEST1` (test symbol; the final mainnet symbol remains subject to Foundation approval and audit) |
+| Symbol | `TIBET` (release candidate) |
 | Decimals | 18 |
-| Initial supply | 13,000,000,000 TIBETTEST1 |
+| Initial supply | 13,000,000,000 TIBET |
 | Initial holder | Constructor-supplied Foundation Safe |
 | Future minting | None |
 | Upgradeability | None |
@@ -31,22 +31,245 @@ See [`TRANSFER_RESTRICTIONS.md`](TRANSFER_RESTRICTIONS.md) for the operating seq
 [`AUDIT_SCOPE.md`](AUDIT_SCOPE.md) for the audit boundary.
 The production launch procedure is documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-## Sepolia test checkout
+## Sepolia `TIBETTEST` test deployment
 
-The current test candidate uses the symbol `TIBETTEST1`. After this change has been merged, check
-out `main` for the next Sepolia deployment:
+This procedure deploys the `TIBETTEST` test contract to Ethereum Sepolia. It is separate
+from the production procedure below. Do not use `audit-candidate-v9` for this test because that
+immutable tag contains the earlier `TIBETLOCKED2` contract.
+
+Text inside `<ANGLE BRACKETS>` is a placeholder. Replace the entire placeholder with the real
+value, while keeping quotation marks where shown. Run each command separately and stop if its
+result differs from the stated expectation.
+
+### 1. Check out and test the correct code
+
+Clone the dedicated Sepolia branch. It is based on the `TIBET` release candidate and changes only
+the contract symbol plus its matching metadata-test assertion:
 
 ```sh
-git clone --branch main --recurse-submodules \
-  https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
-
+git clone --branch sepolia/tibettest --recurse-submodules https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-sepolia
 cd new-tibet-coin-sepolia
-forge test -vvv
 ```
 
-Confirm that every test passes before deploying. Do not use `audit-candidate-v9` for this test:
-that tag is an immutable record of the earlier `TIBETLOCKED2` audit candidate. The production
-checkout below deliberately continues to use the frozen tag until a new audit candidate is approved.
+Confirm that the checkout is clean and record its exact commit:
+
+```sh
+git status --short
+git rev-parse HEAD
+git submodule status --recursive
+```
+
+`git status --short` must display nothing. Save the commit printed by `git rev-parse HEAD` with
+the test-deployment record. The submodule command must list initialized dependencies and no line
+may begin with `-`, `+` or `U`.
+
+Confirm that both the contract and test expect the new symbol:
+
+```sh
+grep -n '"TIBETTEST"' src/NewTibetCoin.sol test/NewTibetCoin.t.sol
+```
+
+The output must contain exactly two relevant results: the constructor symbol in
+`src/NewTibetCoin.sol` and the matching assertion in `test/NewTibetCoin.t.sol`. Stop if either
+value is not exactly `TIBETTEST`.
+
+Run all build and security checks:
+
+```sh
+forge --version
+forge fmt --check
+forge build --sizes
+forge test -vvv
+slither . --config-file slither.config.json
+```
+
+`forge test -vvv` must finish with 16 passing unit/fuzz tests and four passing invariant tests,
+with no failures or skipped tests. Slither must finish with `0 result(s) found`. Stop for any
+compiler error, failed test or Slither finding.
+
+### 2. Confirm Sepolia and the test Foundation Safe
+
+Use this Sepolia RPC for the following commands:
+
+```text
+https://ethereum-sepolia-rpc.publicnode.com
+```
+
+Confirm the network:
+
+```sh
+cast chain-id --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The result must be `11155111`. Any other number means the terminal is connected to the wrong
+network.
+
+Confirm that the Sepolia Foundation Safe contains contract code:
+
+```sh
+cast code "0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The result must be a long hexadecimal value, not only `0x`.
+
+Confirm the Safe owners and threshold:
+
+```sh
+cast call "0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" 'getOwners()(address[])' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" 'getThreshold()(uint256)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The current training Safe should return the three approved test owners and threshold `2`. Check
+the same network, address, owners and threshold in the Safe interface before continuing.
+
+### 3. Simulate without deploying
+
+This runs the complete deployment locally against Sepolia without publishing a transaction:
+
+```sh
+EXPECTED_CHAIN_ID=11155111 \
+FOUNDATION_SAFE_ADDRESS="0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  -vvvv
+```
+
+The simulation must complete successfully without broadcasting. Stop if it reports the wrong
+chain, rejects the Safe, or fails any post-deployment assertion.
+
+### 4. Deploy through MetaMask and the hardware wallet
+
+Connect the approved test hardware-wallet account to MetaMask, select Sepolia, and confirm that
+the deployer has enough Sepolia ETH for the fee. Do not import its recovery phrase or private key.
+
+Record the deployer's pending nonce:
+
+```sh
+cast nonce "<SEPOLIA DEPLOYER ADDRESS>" --block pending \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+Use the returned number to calculate the expected token address:
+
+```sh
+cast compute-address "<SEPOLIA DEPLOYER ADDRESS>" --nonce <NONCE>
+```
+
+Do not send another transaction from the deployer before deployment. Then broadcast once:
+
+```sh
+EXPECTED_CHAIN_ID=11155111 \
+FOUNDATION_SAFE_ADDRESS="0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --browser \
+  --sender "<SEPOLIA DEPLOYER ADDRESS>" \
+  --broadcast \
+  --slow \
+  -vvvv
+```
+
+Foundry should open its browser signer. Connect MetaMask, verify Sepolia, the deployer, zero ETH
+value and the fee, then approve with the hardware wallet. Save the transaction hash and deployed
+contract address. The deployed address must equal the address calculated from the nonce.
+
+### 5. Verify the Sepolia source and bytecode
+
+Encode the Safe constructor argument:
+
+```sh
+cast abi-encode 'constructor(address)' "0x407A99ABbd7Ada3456944200d697aF7b0cf5443e"
+```
+
+Copy the result and replace `<ENCODED SAFE VALUE>` below:
+
+```sh
+forge verify-contract \
+  --verifier etherscan \
+  --etherscan-api-key "<ETHERSCAN API KEY>" \
+  --chain sepolia \
+  --watch \
+  --constructor-args "<ENCODED SAFE VALUE>" \
+  "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
+  src/NewTibetCoin.sol:NewTibetCoin
+
+forge verify-contract \
+  --verifier sourcify \
+  --chain sepolia \
+  --watch \
+  --constructor-args "<ENCODED SAFE VALUE>" \
+  "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
+  src/NewTibetCoin.sol:NewTibetCoin
+
+forge verify-bytecode \
+  --verifier etherscan \
+  --etherscan-api-key "<ETHERSCAN API KEY>" \
+  --chain sepolia \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
+  --encoded-constructor-args "<ENCODED SAFE VALUE>" \
+  "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
+  src/NewTibetCoin.sol:NewTibetCoin
+```
+
+Both source-verification services should report a match, and `forge verify-bytecode` must confirm
+that the creation and runtime bytecode match the checked-out source.
+
+### 6. Confirm the deployed state
+
+Run each call against the newly deployed token:
+
+```sh
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'name()(string)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'symbol()(string)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'totalSupply()(uint256)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'foundationSafe()(address)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'balanceOf(address)(uint256)' \
+  "0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast call "<DEPLOYED TOKEN CONTRACT ADDRESS>" 'transfersEnabled()(bool)' \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+```
+
+The expected results are:
+
+- Name: `New Tibet Coin`
+- Symbol: `TIBETTEST`
+- Total supply: `13000000000000000000000000000`
+- Foundation Safe: `0x407A99ABbd7Ada3456944200d697aF7b0cf5443e`
+- Safe balance: `13000000000000000000000000000` before any distribution
+- Transfers enabled: `false`
+
+Stop and abandon the test deployment if any immutable value is wrong.
+
+### 7. Test the one-way transfer release
+
+1. From the Sepolia Safe, send a small number of tokens to a test account.
+2. From that account, attempt to transfer tokens to a second account. The transaction must fail
+   while `transfersEnabled()` is `false`.
+3. In the Safe Transaction Builder, enter the deployed token address and select
+   `enableTransfers()` with no arguments.
+4. Obtain the required Safe approvals and execute the transaction.
+5. Confirm that `transfersEnabled()` now returns `true`.
+6. Repeat the test-account transfer. It must now succeed.
+
+`enableTransfers()` is irreversible, even on Sepolia. Record the deployment transaction, contract
+address, commit SHA, deployer, Safe, source-verification links, failed locked-transfer attempt,
+release transaction and successful post-release transfer. Add the completed deployment to the
+historical Sepolia table later in this README.
+
 
 ## Production deployment
 
@@ -91,7 +314,7 @@ Sepolia. Never continue if the reported chain ID is different from the intended 
 ### 1. Check out the approved release
 
 ```sh
-git clone --branch audit-candidate-v9 --recurse-submodules \
+git clone --branch audit-candidate-v10 --recurse-submodules \
   https://github.com/AlexJupiter/new-tibet-coin.git new-tibet-coin-release
 
 cd new-tibet-coin-release

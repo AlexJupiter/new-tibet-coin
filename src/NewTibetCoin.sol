@@ -23,7 +23,7 @@ contract NewTibetCoin is ERC20, ERC20Burnable, ERC20Permit, ERC20Votes {
     event TransfersEnabled();
 
     constructor(address foundationSafe_)
-        ERC20("New Tibet Coin", "TIBETTEST1")
+        ERC20("New Tibet Coin", "TIBET")
         ERC20Permit("New Tibet Coin")
     {
         if (foundationSafe_ == address(0) || foundationSafe_.code.length == 0) {
