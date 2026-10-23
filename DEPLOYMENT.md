@@ -197,18 +197,7 @@ network. Never import or type the hardware wallet's recovery phrase or private k
 Keep the device connected and unlocked, and close other wallet applications that could compete for
 the device connection.
 
-Record the deployer's pending nonce and calculate the address that its next transaction will create:
-
-```sh
-cast nonce "<HARDWARE-WALLET DEPLOYER ADDRESS>" --block pending \
-  --rpc-url "$NTC_MAINNET_RPC_URL"
-
-cast compute-address "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
-  --nonce "<NONCE DISPLAYED BY THE PREVIOUS COMMAND>"
-```
-
-Record the resulting contract address. Send no other transaction from the deployer before the
-deployment, because doing so changes its nonce and therefore the expected address.
+When all checks above are complete, broadcast the deployment once:
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
@@ -231,13 +220,12 @@ The device may display many screens of raw contract-creation bytecode. It is not
 validate that bytecode visually on the hardware wallet. The device's role is to protect the private
 key and authorize the exact transaction bytes; it does not replace source review. Before approval,
 the two operators must instead rely on the clean audited release, reproducible build and security
-checks, the reviewed no-broadcast simulation, the verified chain and Safe, and the recorded nonce
-and expected contract address.
+checks, the reviewed no-broadcast simulation, and the verified chain, Safe, deployer, zero ETH value
+and maximum fee.
 
-After approval, record the deployment transaction hash and contract address immediately. The
-deployed address must equal the precomputed address. That address check does not prove the code, so
-do not recognise the deployment or distribute tokens until the source, bytecode and state checks in
-the next section all pass.
+After approval, record the deployment transaction hash and contract address immediately. Do not
+recognise the deployment or distribute tokens until the source, bytecode and state checks in the
+next section all pass.
 
 ## 7. Verify source and deployed state
 
