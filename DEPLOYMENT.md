@@ -236,13 +236,22 @@ next section all pass.
 
 ## 7. Verify source and deployed state
 
-Verify the exact release source on both Etherscan and Sourcify. Constructor arguments are the
-ABI-encoded Foundation Safe address.
+Two different addresses are used below:
+
+- `NTC_FOUNDATION_SAFE` is the approved Safe encoded as the constructor argument.
+- `NTC_TOKEN_ADDRESS` is the new token address printed by the successful deployment. It may
+  change on every deployment.
+
+Never set `NTC_TOKEN_ADDRESS` to the Foundation Safe address.
 
 ```sh
-export NTC_TOKEN_ADDRESS="<deployed token address>"
+export NTC_TOKEN_ADDRESS="<DEPLOYED TOKEN CONTRACT ADDRESS>"
 export NTC_CONSTRUCTOR_ARGS="$(cast abi-encode 'constructor(address)' "$NTC_FOUNDATION_SAFE")"
+```
 
+### 7a. Verify the source on Etherscan
+
+```sh
 forge verify-contract \
   --verifier etherscan \
   --chain mainnet \
@@ -250,7 +259,14 @@ forge verify-contract \
   --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
   "$NTC_TOKEN_ADDRESS" \
   src/NewTibetCoin.sol:NewTibetCoin
+```
 
+Only continue when Etherscan reports successful verification for `NTC_TOKEN_ADDRESS`. Stop on any
+verification failure or address mismatch.
+
+### 7b. Verify the source on Sourcify
+
+```sh
 forge verify-contract \
   --verifier sourcify \
   --chain mainnet \
@@ -258,7 +274,15 @@ forge verify-contract \
   --constructor-args "$NTC_CONSTRUCTOR_ARGS" \
   "$NTC_TOKEN_ADDRESS" \
   src/NewTibetCoin.sol:NewTibetCoin
+```
 
+Only continue when Sourcify reports `exact_match` for `NTC_TOKEN_ADDRESS`.
+
+### 7c. Confirm the deployed bytecode
+
+Run this only after Etherscan verification in Step 7a has succeeded:
+
+```sh
 forge verify-bytecode \
   --verifier etherscan \
   --chain mainnet \
@@ -268,9 +292,9 @@ forge verify-bytecode \
   src/NewTibetCoin.sol:NewTibetCoin
 ```
 
-Both source verifiers must report success, Sourcify must report an exact match, and
-`forge verify-bytecode` must confirm both creation and runtime bytecode. These checks establish that
-the unreadable bytecode approved on the hardware wallet corresponds to the reviewed source and Safe
+The command must confirm both creation and runtime bytecode. If it reports
+`Contract source code not verified`, return to Step 7a. Together, these checks establish that the
+unreadable bytecode approved on the hardware wallet corresponds to the reviewed source and Safe
 constructor argument.
 
 Read and independently compare every deployment invariant:
