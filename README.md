@@ -149,20 +149,7 @@ chain, rejects the Safe, or fails any post-deployment assertion.
 Connect the approved test hardware-wallet account to MetaMask, select Sepolia, and confirm that
 the deployer has enough Sepolia ETH for the fee. Do not import its recovery phrase or private key.
 
-Record the deployer's pending nonce:
-
-```sh
-cast nonce "<SEPOLIA DEPLOYER ADDRESS>" --block pending \
-  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
-```
-
-Use the returned number to calculate the expected token address:
-
-```sh
-cast compute-address "<SEPOLIA DEPLOYER ADDRESS>" --nonce <NONCE>
-```
-
-Do not send another transaction from the deployer before deployment. Then broadcast once:
+When the checks above are complete, broadcast the deployment once:
 
 ```sh
 EXPECTED_CHAIN_ID=11155111 \
@@ -178,7 +165,7 @@ forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
 
 Foundry should open its browser signer. Connect MetaMask, verify Sepolia, the deployer, zero ETH
 value and the fee, then approve with the hardware wallet. Save the transaction hash and deployed
-contract address. The deployed address must equal the address calculated from the nonce.
+contract address.
 
 ### 5. Verify the Sepolia source and bytecode
 
@@ -797,23 +784,7 @@ private key inside the hardware wallet.
 The deployer should hold only enough ETH for the network fee. It receives no tokens and has no
 authority over the token after deployment.
 
-Immediately before broadcasting, record the deployer's pending nonce:
-
-```sh
-cast nonce "<HARDWARE-WALLET DEPLOYER ADDRESS>" --block pending \
-  --rpc-url "<ETHEREUM MAINNET RPC URL>"
-```
-
-The output is a number such as `0`. Use that exact number to calculate the contract address that
-this deployment should create:
-
-```sh
-cast compute-address "<HARDWARE-WALLET DEPLOYER ADDRESS>" --nonce <NONCE FROM PREVIOUS COMMAND>
-```
-
-Record the resulting address. Do not send any other transaction from the deployer between this
-check and the deployment, because another transaction would consume the recorded nonce and change
-the expected contract address.
+When the checks above are complete, broadcast the deployment once:
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
@@ -850,17 +821,15 @@ bytes are intended to do:
 
 - deploy only from the clean, auditor-approved release checked in Step 1;
 - pass every build, test and Slither check and review the no-broadcast simulation;
-- have a second person verify the network, Safe, deployer, expected contract address, zero ETH value
-  and reasonable maximum fee before device approval; and
+- have a second person verify the network, Safe, deployer, zero ETH value and reasonable maximum
+  fee before device approval; and
 - verify the mined bytecode, published source and complete contract state before the Foundation
   recognises the deployment or distributes any tokens.
 
 The device may still require approval of every bytecode screen. Complete those prompts only after
 the checks above pass. Foundry should then display a successful transaction hash and the new token
-contract address. The new address must equal the address calculated from the deployer nonce. Stop
-if it differs or if Foundry reports a failure. Save both addresses and the transaction hash. The
-calculated address confirms the deployer and nonce, but the post-deployment checks prove which code
-and constructor state were actually deployed.
+contract address. Stop if Foundry reports a failure. Save the deployed address and transaction hash.
+The post-deployment checks prove which code and constructor state were actually deployed.
 
 ### 5. Verify the published source
 
