@@ -176,13 +176,23 @@ contract address.
 
 ### 5. Verify the Sepolia source and bytecode
 
-Encode the Safe constructor argument:
+Two different addresses are used in this step:
+
+- The Foundation Safe address is encoded as the constructor argument.
+- `<DEPLOYED TOKEN CONTRACT ADDRESS>` is the new token address printed by the successful
+  deployment. It may change on every deployment.
+
+Never put the Foundation Safe address in the deployed-token-address field.
+
+Encode the Foundation Safe constructor argument:
 
 ```sh
 cast abi-encode 'constructor(address)' "0x407A99ABbd7Ada3456944200d697aF7b0cf5443e"
 ```
 
-Copy the result and replace `<ENCODED SAFE VALUE>` below:
+Copy the result and replace `<ENCODED SAFE VALUE>` in each command below.
+
+#### 5a. Verify the source on Etherscan
 
 ```sh
 forge verify-contract \
@@ -193,7 +203,16 @@ forge verify-contract \
   --constructor-args "<ENCODED SAFE VALUE>" \
   "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
   src/NewTibetCoin.sol:NewTibetCoin
+```
 
+Only continue when Etherscan reports successful verification for the deployed token address. If it
+unexpectedly says that the contract is already verified, open that exact address on Sepolia
+Etherscan and confirm that it is the newly deployed token rather than the Foundation Safe. Stop on
+any verification failure.
+
+#### 5b. Verify the source on Sourcify
+
+```sh
 forge verify-contract \
   --verifier sourcify \
   --chain sepolia \
@@ -201,7 +220,15 @@ forge verify-contract \
   --constructor-args "<ENCODED SAFE VALUE>" \
   "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
   src/NewTibetCoin.sol:NewTibetCoin
+```
 
+Only continue when Sourcify reports `exact_match` for the deployed token address.
+
+#### 5c. Confirm the deployed bytecode
+
+Run this only after Etherscan verification in Step 5a has succeeded:
+
+```sh
 forge verify-bytecode \
   --verifier etherscan \
   --etherscan-api-key "<ETHERSCAN API KEY>" \
@@ -212,8 +239,9 @@ forge verify-bytecode \
   src/NewTibetCoin.sol:NewTibetCoin
 ```
 
-Both source-verification services should report a match, and `forge verify-bytecode` must confirm
-that the creation and runtime bytecode match the checked-out source.
+The command must confirm that the creation and runtime bytecode match the checked-out source. If it
+reports `Contract source code not verified`, return to Step 5a: Etherscan verification has not
+completed for the deployed token address.
 
 ### 6. Confirm the deployed state
 
@@ -842,15 +870,25 @@ The post-deployment checks prove which code and constructor state were actually 
 
 ### 5. Verify the published source
 
+Two different addresses are used in this step:
+
+- `<FOUNDATION SAFE ADDRESS>` is encoded as the constructor argument.
+- `<DEPLOYED TOKEN CONTRACT ADDRESS>` is the new token address printed by the successful
+  deployment. It may change on every deployment.
+
+Never put the Foundation Safe address in the deployed-token-address field.
+
 First encode the Foundation Safe address:
 
 ```sh
 cast abi-encode 'constructor(address)' "<FOUNDATION SAFE ADDRESS>"
 ```
 
-Copy the value displayed by that command. Paste it into `<ENCODED SAFE VALUE>` below. Verify the
-source on both Etherscan and Sourcify. Obtain the Etherscan API key through the Foundation's approved
-credential process and do not save it in this repository or shared deployment records.
+Copy the displayed value into `<ENCODED SAFE VALUE>` below. Obtain the Etherscan API key through
+the Foundation's approved credential process and do not save it in this repository or shared
+deployment records.
+
+#### 5a. Verify the source on Etherscan
 
 ```sh
 forge verify-contract \
@@ -861,7 +899,14 @@ forge verify-contract \
   --constructor-args "<ENCODED SAFE VALUE>" \
   "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
   src/NewTibetCoin.sol:NewTibetCoin
+```
 
+Only continue when Etherscan reports successful verification for the deployed token address. Stop
+on any failure or address mismatch.
+
+#### 5b. Verify the source on Sourcify
+
+```sh
 forge verify-contract \
   --verifier sourcify \
   --chain mainnet \
@@ -869,7 +914,15 @@ forge verify-contract \
   --constructor-args "<ENCODED SAFE VALUE>" \
   "<DEPLOYED TOKEN CONTRACT ADDRESS>" \
   src/NewTibetCoin.sol:NewTibetCoin
+```
 
+Only continue when Sourcify reports `exact_match` for the deployed token address.
+
+#### 5c. Confirm the deployed bytecode
+
+Run this only after Etherscan verification in Step 5a has succeeded:
+
+```sh
 forge verify-bytecode \
   --verifier etherscan \
   --etherscan-api-key "<ETHERSCAN API KEY>" \
@@ -880,10 +933,10 @@ forge verify-bytecode \
   src/NewTibetCoin.sol:NewTibetCoin
 ```
 
-The two source-verification commands must report success, and Sourcify should report an exact match.
-`forge verify-bytecode` must confirm that both the creation and runtime bytecode match the reviewed
-source and encoded Safe constructor argument. This is the practical check for the raw bytecode that
-could not be read meaningfully on the hardware-wallet screen.
+The command must confirm that both the creation and runtime bytecode match the reviewed source and
+encoded Safe constructor argument. If it reports `Contract source code not verified`, return to
+Step 5a. This is the practical check for the raw bytecode that could not be read meaningfully on
+the hardware-wallet screen.
 
 ### 6. Confirm the deployed state
 
