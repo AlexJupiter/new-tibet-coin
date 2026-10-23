@@ -206,10 +206,17 @@ forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   --rpc-url "$NTC_MAINNET_RPC_URL" \
   --browser \
   --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+  --gas-estimate-multiplier 800 \
   --broadcast \
   --slow \
   -vvvv
 ```
+
+`--gas-estimate-multiplier 800` sets the transaction gas limit to 800% of Foundry's local
+estimate. This provides a buffer when the selected network's state-creation gas schedule is newer
+than the local Cancun simulation. Unused gas is not charged. Stop if Foundry proposes a gas limit
+above Ethereum's per-transaction cap of 16,777,216 or if it differs materially from the rehearsed
+deployment without an explained network change.
 
 The `--browser` option opens Foundry's local browser signer. Connect MetaMask when prompted;
 MetaMask will pass the signing request to its connected hardware wallet. Confirm that MetaMask is

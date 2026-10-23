@@ -158,10 +158,17 @@ forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
   --browser \
   --sender "<SEPOLIA DEPLOYER ADDRESS>" \
+  --gas-estimate-multiplier 800 \
   --broadcast \
   --slow \
   -vvvv
 ```
+
+`--gas-estimate-multiplier 800` gives the transaction a gas limit equal to 800% of Foundry's
+local estimate. This is required because the local Cancun simulation can substantially
+underestimate current Sepolia state-creation costs. The successful rehearsal allocated about
+15.68 million gas and used 13,190,149 gas. Unused gas is not charged. Stop if Foundry proposes a
+gas limit above Ethereum's per-transaction cap of 16,777,216.
 
 Foundry should open its browser signer. Connect MetaMask, verify Sepolia, the deployer, zero ETH
 value and the fee, then approve with the hardware wallet. Save the transaction hash and deployed
@@ -793,6 +800,7 @@ forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
   --rpc-url "<ETHEREUM MAINNET RPC URL>" \
   --browser \
   --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+  --gas-estimate-multiplier 800 \
   --broadcast \
   --slow \
   -vvvv
@@ -804,6 +812,7 @@ The important options mean:
 | --- | --- |
 | `--browser` | Opens Foundry's local browser signer so the connected MetaMask account can sign. MetaMask must already be connected to the approved hardware wallet. |
 | `--sender` | Identifies the public deployer address. It does not reveal a private key. |
+| `--gas-estimate-multiplier 800` | Sets the transaction gas limit to 800% of Foundry's local estimate, providing a buffer for newer network state-creation costs. Unused gas is not charged; stop if the proposed limit exceeds 16,777,216. |
 | `--broadcast` | Sends the simulated deployment transaction to Ethereum. Without this option, nothing is published. |
 | `--slow` | Waits for confirmation instead of submitting later transactions in parallel. |
 | `-vvvv` | Displays detailed logs for the deployment record and troubleshooting. |
