@@ -2,10 +2,42 @@
 
 ## Frozen version
 
-The audit handoff is the exact commit referenced by the annotated Git tag
-`audit-candidate-v10`. A branch name or the latest `main` commit is not a sufficient scope
-identifier. The auditor and Foundation should both record the tag's resolved commit SHA before
-work begins.
+The frozen code and build baseline is the annotated Git tag `audit-candidate-v10`,
+resolved to commit `16a9d2ad5356351acf1ccbf2ad35c9ece15c9679`.
+
+For the audit starting 26 October 2026, review `README.md` and `DEPLOYMENT.md` from
+commit `f9d6f54c7b8fcb5bbac0cd1a29cccd7d91638ad4` as the deployment and verification
+instructions accompanying that code baseline. These pinned documentation versions supersede
+the corresponding files in the frozen tag for this audit. All other in-scope files remain at
+the frozen code commit.
+
+The documentation commit is 11 commits ahead of the code baseline. The complete comparison
+changes only `README.md` and `DEPLOYMENT.md`: no Solidity source, deployment script, tests,
+compiler configuration or dependency pins changed. The auditor and Foundation should record
+both exact commits before work begins; a moving branch name is not a sufficient scope identifier.
+
+### Documentation changes requiring review
+
+- Deployment commands add `--gas-estimate-multiplier 800` (800% of the local estimate)
+  to accommodate newer network state-creation gas costs while retaining the Cancun build target.
+  Review the gas assumptions, documented rehearsal figures and 16,777,216 transaction gas-limit
+  stop condition for the intended networks; these are documentation claims to assess, not an
+  assertion of auditor approval.
+- The runbooks remove deployer-nonce recording, contract-address precomputation and the
+  corresponding expected-address comparison. Review this operational change alongside the
+  retained network, Safe, deployer, fee, bytecode and deployed-state checks.
+- Verification instructions explicitly distinguish the Foundation Safe constructor argument
+  from the deployed token address. They sequence Etherscan verification, Sourcify
+  `exact_match`, and creation/runtime bytecode verification, with stop conditions and
+  guidance for `Contract source code not verified`.
+- The README records the existing tag and its resolved commit. Its description of that tag as
+  an "approved immutable release tag" identifies the candidate only; it does not establish
+  audit approval or production readiness. Production release remains conditional on the audit,
+  any required fix review, and approval of the final release.
+
+Use the frozen tag to build and review the code, and the pinned documentation revision above
+to assess the operational instructions. Do not silently substitute later `main` documentation.
+Any subsequent changes to these instructions should be supplied to the auditor as a separate diff.
 
 No Solidity, dependency, compiler or deployment change should be treated as covered unless the
 auditor reviews the resulting diff. Audit fixes should be committed separately and submitted for
