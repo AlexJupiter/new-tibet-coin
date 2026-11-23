@@ -28,6 +28,7 @@ The deployment manifest must record these final values:
 | Release tag and commit | To be approved after audit fix review |
 | Foundation Safe | To be approved and recorded before deployment |
 | Safe threshold and owners | To be approved and independently checked |
+| Deployer, nonce and expected token address | To be recorded together in Step 5 |
 | Solidity | `0.8.37` |
 | EVM version | `cancun` |
 | Optimizer | Enabled, 200 runs |
@@ -169,13 +170,31 @@ session and do not deploy or change anything.
 
 ## 5. Simulate without broadcasting
 
-The deployment script requires the expected chain ID and performs post-deployment assertions for
-the immutable Safe, supply, Safe balance and locked transfer state.
+Read the approved deployer's nonce and calculate the token address its next transaction will create:
+
+```sh
+export NTC_DEPLOYER="<HARDWARE-WALLET DEPLOYER ADDRESS>"
+cast nonce "$NTC_DEPLOYER" --block latest --rpc-url "$NTC_MAINNET_RPC_URL"
+cast nonce "$NTC_DEPLOYER" --block pending --rpc-url "$NTC_MAINNET_RPC_URL"
+cast compute-address "$NTC_DEPLOYER" --nonce "<NONCE DISPLAYED ABOVE>"
+export NTC_EXPECTED_TOKEN="<COMPUTED ADDRESS DISPLAYED ABOVE>"
+```
+
+The two nonces must be equal; a difference means a deployer transaction is still pending, so stop
+and resolve it first. Record the chain ID, deployer, nonce and expected token address together in
+the deployment manifest. Send no other transaction from the deployer until the deployment is
+mined, because doing so changes the address.
+
+The deployment script requires the expected chain ID and token address, and performs
+post-deployment assertions for the immutable Safe, supply, Safe balance and locked transfer state.
+It reverts before anything is broadcast if the deployment would create any other address.
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
+EXPECTED_TOKEN_ADDRESS="$NTC_EXPECTED_TOKEN" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --sender "$NTC_DEPLOYER" \
   --rpc-url "$NTC_MAINNET_RPC_URL" \
   -vvvv
 ```
@@ -197,9 +216,11 @@ network. Never import or type the hardware wallet's recovery phrase or private k
 Keep the device connected and unlocked, and close other wallet applications that could compete for
 the device connection.
 
-When all checks above are complete, broadcast the deployment once:
+Immediately before broadcasting, rerun both `cast nonce` commands from Step 5 and confirm that
+they still return the recorded nonce. Then broadcast the deployment once:
 
 ```sh
+EXPECTED_TOKEN_ADDRESS="$NTC_EXPECTED_TOKEN" \
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
@@ -227,22 +248,36 @@ The device may display many screens of raw contract-creation bytecode. It is not
 validate that bytecode visually on the hardware wallet. The device's role is to protect the private
 key and authorize the exact transaction bytes; it does not replace source review. Before approval,
 the two operators must instead rely on the clean audited release, reproducible build and security
-checks, the reviewed no-broadcast simulation, and the verified chain, Safe, deployer, zero ETH value
-and maximum fee.
+checks, the reviewed no-broadcast simulation, and the verified chain, Safe, deployer, recorded
+nonce and expected token address, zero ETH value and maximum fee.
 
 After approval, record the deployment transaction hash and contract address immediately. Do not
 recognise the deployment or distribute tokens until the source, bytecode and state checks in the
 next section all pass.
+
+If an attempt fails or its outcome is uncertain, do not retry until its transaction status and the
+deployer's pending nonce have been inspected. Any new attempt restarts at Step 5 with a recomputed
+address. Keep every failed or superseded attempt in the deployment record.
 
 ## 7. Verify source and deployed state
 
 Two different addresses are used below:
 
 - `NTC_FOUNDATION_SAFE` is the approved Safe encoded as the constructor argument.
-- `NTC_TOKEN_ADDRESS` is the new token address printed by the successful deployment. It may
-  change on every deployment.
+- `NTC_TOKEN_ADDRESS` is the new token address printed by the successful deployment. It must
+  equal `NTC_EXPECTED_TOKEN` from Step 5.
 
 Never set `NTC_TOKEN_ADDRESS` to the Foundation Safe address.
+
+Two operators must each inspect the mined receipt through a different RPC provider:
+
+```sh
+cast receipt "<DEPLOYMENT TRANSACTION HASH>" --rpc-url "<OPERATOR'S OWN MAINNET RPC URL>"
+```
+
+In both results `from` must be the approved deployer, `status` must be `1 (success)` and
+`contractAddress` must equal `NTC_EXPECTED_TOKEN`. Stop on any difference: a token at any other
+address is not the Foundation's deployment, even if its source, bytecode and state all verify.
 
 ```sh
 export NTC_TOKEN_ADDRESS="<DEPLOYED TOKEN CONTRACT ADDRESS>"
@@ -319,6 +354,9 @@ Expected results include:
 
 Do not distribute tokens if any check differs. Since the token is immutable, abandon an incorrect
 deployment and investigate before deploying a replacement.
+
+Before any distribution or announcement, record the verified token address in the deployment
+record and the Safe address book. Every later token transaction must target that address.
 
 ## 8. Distribution and irreversible release
 
