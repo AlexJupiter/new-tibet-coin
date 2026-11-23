@@ -26,7 +26,7 @@ The deployment manifest must record these final values:
 | Network | Ethereum mainnet |
 | Chain ID | `1` |
 | Release tag and commit | To be approved after audit fix review |
-| Foundation Safe | To be approved and recorded before deployment |
+| Foundation Safe | `0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1` |
 | Safe threshold and owners | To be approved and independently checked |
 | Solidity | `0.8.37` |
 | EVM version | `cancun` |
@@ -133,7 +133,7 @@ must never be accepted for production.
 Confirm that contract code exists at the approved Safe address:
 
 ```sh
-cast code "<APPROVED FOUNDATION SAFE ADDRESS>" \
+cast code "0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1" \
   --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
 ```
 
@@ -143,10 +143,10 @@ contract exists but does not prove that it is the intended Safe.
 Read the Safe owners and threshold directly:
 
 ```sh
-cast call "<APPROVED FOUNDATION SAFE ADDRESS>" 'getOwners()(address[])' \
+cast call "0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1" 'getOwners()(address[])' \
   --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
 
-cast call "<APPROVED FOUNDATION SAFE ADDRESS>" 'getThreshold()(uint256)' \
+cast call "0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1" 'getThreshold()(uint256)' \
   --rpc-url "<TRUSTED ETHEREUM MAINNET RPC URL>"
 ```
 
@@ -161,7 +161,7 @@ runbook:
 
 ```sh
 export NTC_MAINNET_RPC_URL="<TRUSTED ETHEREUM MAINNET RPC URL>"
-export NTC_FOUNDATION_SAFE="<APPROVED FOUNDATION SAFE ADDRESS>"
+export NTC_FOUNDATION_SAFE="0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1"
 ```
 
 These variables are shorthand used repeatedly below. They last only for the current terminal

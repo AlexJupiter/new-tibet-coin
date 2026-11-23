@@ -733,7 +733,8 @@ The command must print exactly `1`. Stop immediately if it returns any other cha
 
 #### Confirm that the Safe address contains a contract
 
-Use the Foundation's approved Ethereum mainnet Safe address:
+Use the Foundation's approved Ethereum mainnet Safe address,
+`0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1`, wherever `<FOUNDATION SAFE ADDRESS>` appears below:
 
 ```sh
 cast code "<FOUNDATION SAFE ADDRESS>" \
