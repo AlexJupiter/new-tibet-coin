@@ -156,19 +156,20 @@ EXPECTED_CHAIN_ID=11155111 \
 FOUNDATION_SAFE_ADDRESS="0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
 RPC_URL="https://ethereum-sepolia-rpc.publicnode.com" \
 DEPLOYER="<SEPOLIA DEPLOYER ADDRESS>" \
+EXPECTED_NONCE="<RECORDED DEPLOYER NONCE>" \
 scripts/deploy.sh --browser -vvvv
 ```
 
-`scripts/deploy.sh` simulates the deployment, asks the target network for a fresh gas estimate of
-the same creation transaction, and prints that estimate beside the gas limit that will be signed.
-It broadcasts only if the limit is at least 115% of the estimate and no more than Ethereum's
-per-transaction cap of 16,777,216; otherwise it stops before any signing request. Record both
-printed figures and, where the RPC supports `eth_config`, the network's active fork. Stop if the
-gas limit presented for signing differs from the printed limit.
+Record the approved deployer's decimal nonce before this command using `cast nonce` on the
+target RPC. The latest and pending nonces must agree. Use that recorded value for `EXPECTED_NONCE`.
 
-The limit is 800% of Foundry's local estimate. If the script stops, set `GAS_ESTIMATE_MULTIPLIER`
-to a value that satisfies both bounds and record why. Unused gas is not charged, but the deployer
-must hold enough ETH to cover the full limit at the maximum fee.
+The wrapper rehearses with Forge, then estimates the exact creation data on the target network.
+It adds 15%, rounds up, and stops if the result exceeds 16,777,216 gas. It rechecks both nonces
+and uses Foundry 1.5.1's `cast send --browser` to request the same creation data with the
+explicit chain, sender, nonce and calculated gas limit. Record the estimate, limit and active
+fork (where `eth_config` is supported). Reject a wallet request with a different limit or nonce.
+After mining, use `cast tx <HASH> --rpc-url <RPC>` to confirm the transaction's gas limit
+and nonce against the record. The receipt's gas used is a separate figure.
 
 The local Cancun simulation can substantially underestimate current Sepolia state-creation costs:
 the successful rehearsal allocated about 15.68 million gas and used 13,190,149 gas.
@@ -829,19 +830,20 @@ EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="<FOUNDATION SAFE ADDRESS>" \
 RPC_URL="<ETHEREUM MAINNET RPC URL>" \
 DEPLOYER="<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+EXPECTED_NONCE="<RECORDED DEPLOYER NONCE>" \
 scripts/deploy.sh --browser -vvvv
 ```
 
-`scripts/deploy.sh` simulates the deployment, asks the target network for a fresh gas estimate of
-the same creation transaction, and prints that estimate beside the gas limit that will be signed.
-It broadcasts only if the limit is at least 115% of the estimate and no more than Ethereum's
-per-transaction cap of 16,777,216; otherwise it stops before any signing request. Record both
-printed figures and, where the RPC supports `eth_config`, the network's active fork. Stop if the
-gas limit presented for signing differs from the printed limit.
+Record the approved deployer's decimal nonce before this command using `cast nonce` on the
+target RPC. The latest and pending nonces must agree. Use that recorded value for `EXPECTED_NONCE`.
 
-The limit is 800% of Foundry's local estimate. If the script stops, set `GAS_ESTIMATE_MULTIPLIER`
-to a value that satisfies both bounds and record why. Unused gas is not charged, but the deployer
-must hold enough ETH to cover the full limit at the maximum fee.
+The wrapper rehearses with Forge, then estimates the exact creation data on the target network.
+It adds 15%, rounds up, and stops if the result exceeds 16,777,216 gas. It rechecks both nonces
+and uses Foundry 1.5.1's `cast send --browser` to request the same creation data with the
+explicit chain, sender, nonce and calculated gas limit. Record the estimate, limit and active
+fork (where `eth_config` is supported). Reject a wallet request with a different limit or nonce.
+After mining, use `cast tx <HASH> --rpc-url <RPC>` to confirm the transaction's gas limit
+and nonce against the record. The receipt's gas used is a separate figure.
 
 The important options mean:
 

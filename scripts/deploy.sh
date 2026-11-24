@@ -1,52 +1,39 @@
 #!/usr/bin/env bash
-#
-# Broadcasts the deployment only if the gas limit that will be signed is at least 115% of a
-# fresh target-network estimate for the same creation transaction (audit finding NTF-01-001).
-#
-# Requires RPC_URL, DEPLOYER and FOUNDATION_SAFE_ADDRESS, plus the variables read by
-# script/DeployNewTibetCoin.s.sol, which Foundry inherits from this environment.
-# Accepts only a signer and a verbosity level, for example: scripts/deploy.sh --browser -vvvv
-
+# Rehearse the deployment, then request one creation transaction with a fixed gas limit.
 set -Eeuo pipefail
 
-readonly MARGIN_PERCENT=115
-readonly GAS_CAP=16777216 # EIP-7825 per-transaction limit
-readonly NUMBER='^[1-9][0-9]{0,11}$'
+: "${RPC_URL:?}" "${DEPLOYER:?}" "${FOUNDATION_SAFE_ADDRESS:?}" "${EXPECTED_CHAIN_ID:?}"
+: "${EXPECTED_NONCE:?set the approved deployer nonce}"
 
-: "${RPC_URL:?}" "${DEPLOYER:?}" "${FOUNDATION_SAFE_ADDRESS:?}"
+stop() { printf 'Stop: %s\n' "$*" >&2; exit 1; }
 
-# Any other argument could make the broadcast differ from the simulation checked below.
+# Only signer and logging options may vary. Transaction fields are set below.
 for argument in "$@"; do
-    if [[ ! "${argument}" =~ ^(--browser|--ledger|--trezor|-v{1,5})$ ]]; then
-        printf 'Stop: unsupported argument %s\n' "${argument}" >&2
-        exit 1
-    fi
+    [[ "$argument" =~ ^(--browser|--ledger|--trezor|-v{1,5})$ ]] ||
+        stop "unsupported argument $argument"
 done
-
+[[ "$EXPECTED_NONCE" =~ ^(0|[1-9][0-9]*)$ ]] || stop "invalid approved nonce"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-deploy=(
-    forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin
-    --rpc-url "${RPC_URL}"
-    --sender "${DEPLOYER}"
-    --gas-estimate-multiplier "${GAS_ESTIMATE_MULTIPLIER:-800}"
-)
+rpc=(--rpc-url "$RPC_URL")
+forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin "${rpc[@]}" --sender "$DEPLOYER"
 
-# The simulation prints the gas limit Foundry will ask the deployer to sign.
-limit="$("${deploy[@]}" | awk '/Estimated total gas used for script/ { print $NF }')"
+bytecode="$(forge inspect src/NewTibetCoin.sol:NewTibetCoin bytecode)"
+[[ "$bytecode" =~ ^0x([[:xdigit:]]{2})+$ ]] || stop "invalid creation bytecode"
+constructor="$(cast abi-encode 'constructor(address)' "$FOUNDATION_SAFE_ADDRESS")"
+[[ "$constructor" =~ ^0x[[:xdigit:]]{64}$ ]] || stop "invalid constructor encoding"
+initcode="$bytecode${constructor#0x}"
+creation=(--from "$DEPLOYER" --nonce "$EXPECTED_NONCE")
 
-# eth_estimateGas on the target network for the exact creation transaction.
-bytecode="$(forge inspect NewTibetCoin bytecode)"
-estimate="$(cast estimate --rpc-url "${RPC_URL}" --from "${DEPLOYER}" \
-    --create "${bytecode}" 'constructor(address)' "${FOUNDATION_SAFE_ADDRESS}")"
+estimate="$(cast estimate "${rpc[@]}" "${creation[@]}" --create "$initcode")"
+[[ "$estimate" =~ ^[1-9][0-9]{0,11}$ ]] || stop "invalid target-network gas estimate"
+gas_limit=$(( (estimate * 115 + 99) / 100 ))
+printf 'Network gas estimate: %s\nGas limit to sign:    %s\n' "$estimate" "$gas_limit"
+(( gas_limit <= 16777216 )) || stop "required gas limit exceeds 16,777,216"
 
-printf 'Network gas estimate: %s\nGas limit to sign:    %s\n' "${estimate}" "${limit}"
+latest="$(cast nonce "$DEPLOYER" --block latest "${rpc[@]}")"
+pending="$(cast nonce "$DEPLOYER" --block pending "${rpc[@]}")"
+[[ "$latest" == "$EXPECTED_NONCE" && "$pending" == "$EXPECTED_NONCE" ]] ||
+    stop "latest and pending deployer nonces must both equal $EXPECTED_NONCE"
 
-if ! [[ "${limit}" =~ ${NUMBER} && "${estimate}" =~ ${NUMBER} ]] ||
-    ((limit * 100 < estimate * MARGIN_PERCENT || limit > GAS_CAP)); then
-    printf 'Stop: the gas limit must be %s%% of the estimate or more, and at most %s.\n' \
-        "${MARGIN_PERCENT}" "${GAS_CAP}" >&2
-    exit 1
-fi
-
-exec "${deploy[@]}" --broadcast --slow "$@"
+exec cast send "${rpc[@]}" --chain "$EXPECTED_CHAIN_ID" "${creation[@]}" "$@" --gas-limit "$gas_limit" --create "$initcode"
