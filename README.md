@@ -676,7 +676,7 @@ This compiles the token using Solidity `0.8.37` and displays the deployed and cr
 The output must report a successful compiler run and include this `NewTibetCoin` row:
 
 ```text
-NewTibetCoin | 7,929 | 10,953 | 16,647 | 38,199
+NewTibetCoin | 7,929 | 10,946 | 16,647 | 38,206
 ```
 
 The four numbers are runtime size, creation-code size and their remaining limits, in bytes. They
@@ -733,7 +733,8 @@ The command must print exactly `1`. Stop immediately if it returns any other cha
 
 #### Confirm that the Safe address contains a contract
 
-Use the Foundation's approved Ethereum mainnet Safe address:
+Use the Foundation's approved Ethereum mainnet Safe address,
+`0xf8F7A81C9F2FE238432fA63a1B46031F185F11b1`, wherever `<FOUNDATION SAFE ADDRESS>` appears below:
 
 ```sh
 cast code "<FOUNDATION SAFE ADDRESS>" \
