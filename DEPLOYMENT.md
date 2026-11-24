@@ -5,7 +5,8 @@ two-person operational checklist, not an authorization to deploy. The Foundation
 final audit commit, Safe configuration, deployment parameters and launch timing before any
 transaction is broadcast.
 
-The Sepolia helper in `scripts/deploy-sepolia.sh` is test-only and must not be used for mainnet.
+Every broadcast, on Sepolia and on mainnet, must go through `scripts/deploy.sh`, which enforces the
+gas check described in Step 6.
 
 ## 1. Freeze the release
 
@@ -32,6 +33,7 @@ The deployment manifest must record these final values:
 | EVM version | `cancun` |
 | Optimizer | Enabled, 200 runs |
 | OpenZeppelin Contracts | `v5.6.0` at the pinned submodule commit |
+| Active fork, network gas estimate and gas limit | To be recorded in Step 6 |
 
 ## 2. Prepare the Foundation Safe
 
@@ -191,6 +193,9 @@ The deployer receives no tokens or token privilege and can be retired afterward.
 Ethereum cannot prove which type of device produced a valid signature. Hardware-wallet compliance
 must therefore be recorded and checked through the Foundation's operational process.
 
+Record the approved deployer's decimal nonce using `cast nonce` on the target RPC. The latest and
+pending nonces must agree. Use that recorded value for `EXPECTED_NONCE` in the command below.
+
 Before running the command, connect the approved Ledger or Trezor to MetaMask using MetaMask's
 hardware-wallet connection. Select the exact approved deployer account and intended Ethereum
 network. Never import or type the hardware wallet's recovery phrase or private key into MetaMask.
@@ -202,21 +207,24 @@ When all checks above are complete, broadcast the deployment once:
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
-forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
-  --rpc-url "$NTC_MAINNET_RPC_URL" \
-  --browser \
-  --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
-  --gas-estimate-multiplier 800 \
-  --broadcast \
-  --slow \
-  -vvvv
+RPC_URL="$NTC_MAINNET_RPC_URL" \
+DEPLOYER="<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+EXPECTED_NONCE="<RECORDED DEPLOYER NONCE>" \
+scripts/deploy.sh --browser -vvvv
 ```
 
-`--gas-estimate-multiplier 800` sets the transaction gas limit to 800% of Foundry's local
-estimate. This provides a buffer when the selected network's state-creation gas schedule is newer
-than the local Cancun simulation. Unused gas is not charged. Stop if Foundry proposes a gas limit
-above Ethereum's per-transaction cap of 16,777,216 or if it differs materially from the rehearsed
-deployment without an explained network change.
+The wrapper rehearses with Forge, then estimates the exact creation data on the target network.
+It adds 15%, rounds up, and stops if the result exceeds 16,777,216 gas. It rechecks both nonces
+and uses Foundry 1.5.1's `cast send --browser` to request the same creation data with the
+explicit chain, sender, nonce and calculated gas limit. Record the estimate, limit and active
+fork (where `eth_config` is supported). Reject a wallet request with a different limit or nonce.
+After mining, use `cast tx <HASH> --rpc-url <RPC>` to confirm the transaction's gas limit
+and nonce against the record. The receipt's gas used is a separate figure.
+
+Two things to expect when it runs. The rehearsal ends with Foundry's own local gas estimate and a
+hint to add `--broadcast`: ignore both, because the wrapper sends the transaction itself and the
+figures to record are the two it prints next, `Network gas estimate` and `Gas limit to sign`.
+Foundry 1.5.1's signer page lists a built-in Porto wallet beside MetaMask: choose MetaMask.
 
 The `--browser` option opens Foundry's local browser signer. Connect MetaMask when prompted;
 MetaMask will pass the signing request to its connected hardware wallet. Confirm that MetaMask is
