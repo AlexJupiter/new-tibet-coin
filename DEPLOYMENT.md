@@ -32,6 +32,7 @@ The deployment manifest must record these final values:
 | EVM version | `cancun` |
 | Optimizer | Enabled, 200 runs |
 | OpenZeppelin Contracts | `v5.6.0` at the pinned submodule commit |
+| Active fork, network gas estimate and gas limit | To be recorded in Step 6 |
 
 ## 2. Prepare the Foundation Safe
 
@@ -202,21 +203,21 @@ When all checks above are complete, broadcast the deployment once:
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="$NTC_FOUNDATION_SAFE" \
-forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
-  --rpc-url "$NTC_MAINNET_RPC_URL" \
-  --browser \
-  --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
-  --gas-estimate-multiplier 800 \
-  --broadcast \
-  --slow \
-  -vvvv
+RPC_URL="$NTC_MAINNET_RPC_URL" \
+DEPLOYER="<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+scripts/deploy.sh --browser -vvvv
 ```
 
-`--gas-estimate-multiplier 800` sets the transaction gas limit to 800% of Foundry's local
-estimate. This provides a buffer when the selected network's state-creation gas schedule is newer
-than the local Cancun simulation. Unused gas is not charged. Stop if Foundry proposes a gas limit
-above Ethereum's per-transaction cap of 16,777,216 or if it differs materially from the rehearsed
-deployment without an explained network change.
+`scripts/deploy.sh` simulates the deployment, asks the target network for a fresh gas estimate of
+the same creation transaction, and prints that estimate beside the gas limit that will be signed.
+It broadcasts only if the limit is at least 115% of the estimate and no more than Ethereum's
+per-transaction cap of 16,777,216; otherwise it stops before any signing request. Record both
+printed figures and, where the RPC supports `eth_config`, the network's active fork. Stop if the
+gas limit presented for signing differs from the printed limit.
+
+The limit is 800% of Foundry's local estimate. If the script stops, set `GAS_ESTIMATE_MULTIPLIER`
+to a value that satisfies both bounds and record why. Unused gas is not charged, but the deployer
+must hold enough ETH to cover the full limit at the maximum fee.
 
 The `--browser` option opens Foundry's local browser signer. Connect MetaMask when prompted;
 MetaMask will pass the signing request to its connected hardware wallet. Confirm that MetaMask is

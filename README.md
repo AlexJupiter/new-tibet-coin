@@ -154,21 +154,24 @@ When the checks above are complete, broadcast the deployment once:
 ```sh
 EXPECTED_CHAIN_ID=11155111 \
 FOUNDATION_SAFE_ADDRESS="0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
-forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
-  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
-  --browser \
-  --sender "<SEPOLIA DEPLOYER ADDRESS>" \
-  --gas-estimate-multiplier 800 \
-  --broadcast \
-  --slow \
-  -vvvv
+RPC_URL="https://ethereum-sepolia-rpc.publicnode.com" \
+DEPLOYER="<SEPOLIA DEPLOYER ADDRESS>" \
+scripts/deploy.sh --browser -vvvv
 ```
 
-`--gas-estimate-multiplier 800` gives the transaction a gas limit equal to 800% of Foundry's
-local estimate. This is required because the local Cancun simulation can substantially
-underestimate current Sepolia state-creation costs. The successful rehearsal allocated about
-15.68 million gas and used 13,190,149 gas. Unused gas is not charged. Stop if Foundry proposes a
-gas limit above Ethereum's per-transaction cap of 16,777,216.
+`scripts/deploy.sh` simulates the deployment, asks the target network for a fresh gas estimate of
+the same creation transaction, and prints that estimate beside the gas limit that will be signed.
+It broadcasts only if the limit is at least 115% of the estimate and no more than Ethereum's
+per-transaction cap of 16,777,216; otherwise it stops before any signing request. Record both
+printed figures and, where the RPC supports `eth_config`, the network's active fork. Stop if the
+gas limit presented for signing differs from the printed limit.
+
+The limit is 800% of Foundry's local estimate. If the script stops, set `GAS_ESTIMATE_MULTIPLIER`
+to a value that satisfies both bounds and record why. Unused gas is not charged, but the deployer
+must hold enough ETH to cover the full limit at the maximum fee.
+
+The local Cancun simulation can substantially underestimate current Sepolia state-creation costs:
+the successful rehearsal allocated about 15.68 million gas and used 13,190,149 gas.
 
 Foundry should open its browser signer. Connect MetaMask, verify Sepolia, the deployer, zero ETH
 value and the fee, then approve with the hardware wallet. Save the transaction hash and deployed
@@ -824,25 +827,28 @@ When the checks above are complete, broadcast the deployment once:
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="<FOUNDATION SAFE ADDRESS>" \
-forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
-  --rpc-url "<ETHEREUM MAINNET RPC URL>" \
-  --browser \
-  --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
-  --gas-estimate-multiplier 800 \
-  --broadcast \
-  --slow \
-  -vvvv
+RPC_URL="<ETHEREUM MAINNET RPC URL>" \
+DEPLOYER="<HARDWARE-WALLET DEPLOYER ADDRESS>" \
+scripts/deploy.sh --browser -vvvv
 ```
+
+`scripts/deploy.sh` simulates the deployment, asks the target network for a fresh gas estimate of
+the same creation transaction, and prints that estimate beside the gas limit that will be signed.
+It broadcasts only if the limit is at least 115% of the estimate and no more than Ethereum's
+per-transaction cap of 16,777,216; otherwise it stops before any signing request. Record both
+printed figures and, where the RPC supports `eth_config`, the network's active fork. Stop if the
+gas limit presented for signing differs from the printed limit.
+
+The limit is 800% of Foundry's local estimate. If the script stops, set `GAS_ESTIMATE_MULTIPLIER`
+to a value that satisfies both bounds and record why. Unused gas is not charged, but the deployer
+must hold enough ETH to cover the full limit at the maximum fee.
 
 The important options mean:
 
 | Option | Meaning |
 | --- | --- |
 | `--browser` | Opens Foundry's local browser signer so the connected MetaMask account can sign. MetaMask must already be connected to the approved hardware wallet. |
-| `--sender` | Identifies the public deployer address. It does not reveal a private key. |
-| `--gas-estimate-multiplier 800` | Sets the transaction gas limit to 800% of Foundry's local estimate, providing a buffer for newer network state-creation costs. Unused gas is not charged; stop if the proposed limit exceeds 16,777,216. |
-| `--broadcast` | Sends the simulated deployment transaction to Ethereum. Without this option, nothing is published. |
-| `--slow` | Waits for confirmation instead of submitting later transactions in parallel. |
+| `DEPLOYER` | Identifies the public deployer address. It does not reveal a private key. |
 | `-vvvv` | Displays detailed logs for the deployment record and troubleshooting. |
 
 Foundry should open a local browser page. Connect MetaMask, confirm that its selected account is the
