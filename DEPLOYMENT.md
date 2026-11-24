@@ -5,7 +5,8 @@ two-person operational checklist, not an authorization to deploy. The Foundation
 final audit commit, Safe configuration, deployment parameters and launch timing before any
 transaction is broadcast.
 
-The Sepolia helper in `scripts/deploy-sepolia.sh` is test-only and must not be used for mainnet.
+Every broadcast, on Sepolia and on mainnet, must go through `scripts/deploy.sh`, which enforces the
+gas check described in Step 6.
 
 ## 1. Freeze the release
 
