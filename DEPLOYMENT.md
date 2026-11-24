@@ -97,7 +97,7 @@ Run the following checks one at a time and save their complete output with the d
 | --- | --- | --- |
 | `forge --version` | Confirms the reviewed build-tool version. | First line is `forge Version: 1.5.1-stable`. |
 | `forge fmt --check` | Detects accidental Solidity formatting changes. | No output and no proposed change. |
-| `forge build --sizes` | Compiles with Solidity 0.8.37 and checks Ethereum code-size limits. | Successful build; `NewTibetCoin` shows runtime size `7,929` and creation-code size `10,953` bytes. |
+| `forge build --sizes` | Compiles with Solidity 0.8.37 and checks Ethereum code-size limits. | Successful build; `NewTibetCoin` shows runtime size `7,929` and creation-code size `10,946` bytes. |
 | `forge test -vvv` | Runs unit, fuzz and invariant tests. | 16 token tests and 4 invariant tests pass; none fail or are skipped. |
 | `slither . --config-file slither.config.json` | Scans for common Solidity vulnerabilities. | Final message ends with `0 result(s) found`. |
 

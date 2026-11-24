@@ -676,7 +676,7 @@ This compiles the token using Solidity `0.8.37` and displays the deployed and cr
 The output must report a successful compiler run and include this `NewTibetCoin` row:
 
 ```text
-NewTibetCoin | 7,929 | 10,953 | 16,647 | 38,199
+NewTibetCoin | 7,929 | 10,946 | 16,647 | 38,206
 ```
 
 The four numbers are runtime size, creation-code size and their remaining limits, in bytes. They
