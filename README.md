@@ -131,12 +131,31 @@ the same network, address, owners and threshold in the Safe interface before con
 
 ### 3. Simulate without deploying
 
+Read the deployer's nonce and calculate the token address its next transaction will create:
+
+```sh
+cast nonce "<SEPOLIA DEPLOYER ADDRESS>" --block latest \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast nonce "<SEPOLIA DEPLOYER ADDRESS>" --block pending \
+  --rpc-url "https://ethereum-sepolia-rpc.publicnode.com"
+
+cast compute-address "<SEPOLIA DEPLOYER ADDRESS>" --nonce <NONCE DISPLAYED ABOVE>
+```
+
+The two nonces must be equal; a difference means a deployer transaction is still pending, so stop
+and resolve it first. Record the chain ID, deployer, nonce and computed address together as
+`<EXPECTED TOKEN ADDRESS>`. Send no other transaction from the deployer until the deployment is
+mined, because doing so changes the address.
+
 This runs the complete deployment locally against Sepolia without publishing a transaction:
 
 ```sh
 EXPECTED_CHAIN_ID=11155111 \
 FOUNDATION_SAFE_ADDRESS="0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
+EXPECTED_TOKEN_ADDRESS="<EXPECTED TOKEN ADDRESS>" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --sender "<SEPOLIA DEPLOYER ADDRESS>" \
   --rpc-url "https://ethereum-sepolia-rpc.publicnode.com" \
   -vvvv
 ```
@@ -149,9 +168,11 @@ chain, rejects the Safe, or fails any post-deployment assertion.
 Connect the approved test hardware-wallet account to MetaMask, select Sepolia, and confirm that
 the deployer has enough Sepolia ETH for the fee. Do not import its recovery phrase or private key.
 
-When the checks above are complete, broadcast the deployment once:
+Immediately before broadcasting, rerun both `cast nonce` commands from Step 3 and confirm that
+they still return the recorded nonce. Then broadcast the deployment once:
 
 ```sh
+EXPECTED_TOKEN_ADDRESS="<EXPECTED TOKEN ADDRESS>" \
 EXPECTED_CHAIN_ID=11155111 \
 FOUNDATION_SAFE_ADDRESS="0x407A99ABbd7Ada3456944200d697aF7b0cf5443e" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
@@ -174,15 +195,29 @@ Foundry should open its browser signer. Connect MetaMask, verify Sepolia, the de
 value and the fee, then approve with the hardware wallet. Save the transaction hash and deployed
 contract address.
 
+If an attempt fails or its outcome is uncertain, do not retry until its transaction status and the
+deployer's pending nonce have been inspected. Any new attempt restarts at Step 3 with a recomputed
+address. Keep every failed or superseded attempt in the deployment record.
+
 ### 5. Verify the Sepolia source and bytecode
 
 Two different addresses are used in this step:
 
 - The Foundation Safe address is encoded as the constructor argument.
 - `<DEPLOYED TOKEN CONTRACT ADDRESS>` is the new token address printed by the successful
-  deployment. It may change on every deployment.
+  deployment. It must equal `<EXPECTED TOKEN ADDRESS>` from Step 3.
 
 Never put the Foundation Safe address in the deployed-token-address field.
+
+Two operators must each inspect the mined receipt through a different RPC provider:
+
+```sh
+cast receipt "<DEPLOYMENT TRANSACTION HASH>" --rpc-url "<OPERATOR'S OWN SEPOLIA RPC URL>"
+```
+
+In both results `from` must be the deployer, `status` must be `1 (success)` and `contractAddress`
+must equal `<EXPECTED TOKEN ADDRESS>`. Stop on any difference: a token at any other address is not
+the Foundation's deployment, even if its source, bytecode and state all verify.
 
 Encode the Foundation Safe constructor argument:
 
@@ -779,14 +814,34 @@ setting differs.
 
 ### 3. Simulate the deployment
 
-This performs a complete rehearsal without publishing a transaction. The first two lines give the
-script the only acceptable network (`1` means Ethereum mainnet) and the approved Safe address. They
-apply only to this one command.
+Read the deployer's nonce and calculate the token address its next transaction will create:
+
+```sh
+cast nonce "<HARDWARE-WALLET DEPLOYER ADDRESS>" --block latest \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>"
+
+cast nonce "<HARDWARE-WALLET DEPLOYER ADDRESS>" --block pending \
+  --rpc-url "<ETHEREUM MAINNET RPC URL>"
+
+cast compute-address "<HARDWARE-WALLET DEPLOYER ADDRESS>" --nonce <NONCE DISPLAYED ABOVE>
+```
+
+The two nonces must be equal; a difference means a deployer transaction is still pending, so stop
+and resolve it first. Record the chain ID, deployer, nonce and computed address together as
+`<EXPECTED TOKEN ADDRESS>`. Send no other transaction from the deployer until the deployment is
+mined, because doing so changes the address.
+
+This performs a complete rehearsal without publishing a transaction. The first three lines give
+the script the only acceptable network (`1` means Ethereum mainnet), the approved Safe address and
+the only acceptable token address. They apply only to this one command. The script reverts before
+anything is broadcast if the deployment would create any other address.
 
 ```sh
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="<FOUNDATION SAFE ADDRESS>" \
+EXPECTED_TOKEN_ADDRESS="<EXPECTED TOKEN ADDRESS>" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
+  --sender "<HARDWARE-WALLET DEPLOYER ADDRESS>" \
   --rpc-url "<ETHEREUM MAINNET RPC URL>" \
   -vvvv
 ```
@@ -819,9 +874,11 @@ private key inside the hardware wallet.
 The deployer should hold only enough ETH for the network fee. It receives no tokens and has no
 authority over the token after deployment.
 
-When the checks above are complete, broadcast the deployment once:
+Immediately before broadcasting, rerun both `cast nonce` commands from Step 3 and confirm that
+they still return the recorded nonce. Then broadcast the deployment once:
 
 ```sh
+EXPECTED_TOKEN_ADDRESS="<EXPECTED TOKEN ADDRESS>" \
 EXPECTED_CHAIN_ID=1 \
 FOUNDATION_SAFE_ADDRESS="<FOUNDATION SAFE ADDRESS>" \
 forge script script/DeployNewTibetCoin.s.sol:DeployNewTibetCoin \
@@ -858,8 +915,8 @@ bytes are intended to do:
 
 - deploy only from the clean, auditor-approved release checked in Step 1;
 - pass every build, test and Slither check and review the no-broadcast simulation;
-- have a second person verify the network, Safe, deployer, zero ETH value and reasonable maximum
-  fee before device approval; and
+- have a second person verify the network, Safe, deployer, recorded nonce, expected token address,
+  zero ETH value and reasonable maximum fee before device approval; and
 - verify the mined bytecode, published source and complete contract state before the Foundation
   recognises the deployment or distributes any tokens.
 
@@ -868,15 +925,29 @@ the checks above pass. Foundry should then display a successful transaction hash
 contract address. Stop if Foundry reports a failure. Save the deployed address and transaction hash.
 The post-deployment checks prove which code and constructor state were actually deployed.
 
+If an attempt fails or its outcome is uncertain, do not retry until its transaction status and the
+deployer's pending nonce have been inspected. Any new attempt restarts at Step 3 with a recomputed
+address. Keep every failed or superseded attempt in the deployment record.
+
 ### 5. Verify the published source
 
 Two different addresses are used in this step:
 
 - `<FOUNDATION SAFE ADDRESS>` is encoded as the constructor argument.
 - `<DEPLOYED TOKEN CONTRACT ADDRESS>` is the new token address printed by the successful
-  deployment. It may change on every deployment.
+  deployment. It must equal `<EXPECTED TOKEN ADDRESS>` from Step 3.
 
 Never put the Foundation Safe address in the deployed-token-address field.
+
+Two operators must each inspect the mined receipt through a different RPC provider:
+
+```sh
+cast receipt "<DEPLOYMENT TRANSACTION HASH>" --rpc-url "<OPERATOR'S OWN MAINNET RPC URL>"
+```
+
+In both results `from` must be the deployer, `status` must be `1 (success)` and `contractAddress`
+must equal `<EXPECTED TOKEN ADDRESS>`. Stop on any difference: a token at any other address is not
+the Foundation's deployment, even if its source, bytecode and state all verify.
 
 First encode the Foundation Safe address:
 
@@ -965,6 +1036,9 @@ The total supply and Safe balance must both be `13000000000000000000000000000` b
 `foundationSafe()` must be the approved Safe, and `transfersEnabled()` must be `false`. Do not
 distribute tokens or announce the address if any result differs. An incorrect immutable deployment
 must be abandoned and investigated.
+
+Before any distribution or announcement, record the verified token address in the deployment
+record and the Safe address book. Every later token transaction must target that address.
 
 Deployment does not enable transfers. The Foundation Safe should call `enableTransfers()` only after
 allocations and launch preparations are complete. This later action is global and irreversible.
