@@ -146,6 +146,9 @@ chain, rejects the Safe, or fails any post-deployment assertion.
 
 ### 4. Deploy through MetaMask and the hardware wallet
 
+Record the approved deployer's decimal nonce using `cast nonce` on the target RPC. The latest and
+pending nonces must agree. Use that recorded value for `EXPECTED_NONCE` in the command below.
+
 Connect the approved test hardware-wallet account to MetaMask, select Sepolia, and confirm that
 the deployer has enough Sepolia ETH for the fee. Do not import its recovery phrase or private key.
 
@@ -160,9 +163,6 @@ EXPECTED_NONCE="<RECORDED DEPLOYER NONCE>" \
 scripts/deploy.sh --browser -vvvv
 ```
 
-Record the approved deployer's decimal nonce before this command using `cast nonce` on the
-target RPC. The latest and pending nonces must agree. Use that recorded value for `EXPECTED_NONCE`.
-
 The wrapper rehearses with Forge, then estimates the exact creation data on the target network.
 It adds 15%, rounds up, and stops if the result exceeds 16,777,216 gas. It rechecks both nonces
 and uses Foundry 1.5.1's `cast send --browser` to request the same creation data with the
@@ -171,8 +171,14 @@ fork (where `eth_config` is supported). Reject a wallet request with a different
 After mining, use `cast tx <HASH> --rpc-url <RPC>` to confirm the transaction's gas limit
 and nonce against the record. The receipt's gas used is a separate figure.
 
-The local Cancun simulation can substantially underestimate current Sepolia state-creation costs:
-the successful rehearsal allocated about 15.68 million gas and used 13,190,149 gas.
+Two things to expect when it runs. The rehearsal ends with Foundry's own local gas estimate and a
+hint to add `--broadcast`: ignore both, because the wrapper sends the transaction itself and the
+figures to record are the two it prints next, `Network gas estimate` and `Gas limit to sign`.
+Foundry 1.5.1's signer page lists a built-in Porto wallet beside MetaMask: choose MetaMask.
+
+Expect a far larger estimate on Sepolia than the local Cancun simulation suggests, because its
+state-creation costs are higher: the successful rehearsal used 13,190,149 gas, which would put the
+limit near 15.2 million.
 
 Foundry should open its browser signer. Connect MetaMask, verify Sepolia, the deployer, zero ETH
 value and the fee, then approve with the hardware wallet. Save the transaction hash and deployed
@@ -820,6 +826,9 @@ MetaMask to connect. MetaMask then passes the signing request to the connected h
 This avoids Foundry's unreliable direct `--ledger` and `--trezor` interfaces while keeping the
 private key inside the hardware wallet.
 
+Record the approved deployer's decimal nonce using `cast nonce` on the target RPC. The latest and
+pending nonces must agree. Use that recorded value for `EXPECTED_NONCE` in the command below.
+
 The deployer should hold only enough ETH for the network fee. It receives no tokens and has no
 authority over the token after deployment.
 
@@ -834,9 +843,6 @@ EXPECTED_NONCE="<RECORDED DEPLOYER NONCE>" \
 scripts/deploy.sh --browser -vvvv
 ```
 
-Record the approved deployer's decimal nonce before this command using `cast nonce` on the
-target RPC. The latest and pending nonces must agree. Use that recorded value for `EXPECTED_NONCE`.
-
 The wrapper rehearses with Forge, then estimates the exact creation data on the target network.
 It adds 15%, rounds up, and stops if the result exceeds 16,777,216 gas. It rechecks both nonces
 and uses Foundry 1.5.1's `cast send --browser` to request the same creation data with the
@@ -845,12 +851,18 @@ fork (where `eth_config` is supported). Reject a wallet request with a different
 After mining, use `cast tx <HASH> --rpc-url <RPC>` to confirm the transaction's gas limit
 and nonce against the record. The receipt's gas used is a separate figure.
 
+Two things to expect when it runs. The rehearsal ends with Foundry's own local gas estimate and a
+hint to add `--broadcast`: ignore both, because the wrapper sends the transaction itself and the
+figures to record are the two it prints next, `Network gas estimate` and `Gas limit to sign`.
+Foundry 1.5.1's signer page lists a built-in Porto wallet beside MetaMask: choose MetaMask.
+
 The important options mean:
 
 | Option | Meaning |
 | --- | --- |
 | `--browser` | Opens Foundry's local browser signer so the connected MetaMask account can sign. MetaMask must already be connected to the approved hardware wallet. |
 | `DEPLOYER` | Identifies the public deployer address. It does not reveal a private key. |
+| `EXPECTED_NONCE` | The deployer's recorded nonce. The script stops unless the latest and pending nonces both equal it, and requests the transaction with that nonce. |
 | `-vvvv` | Displays detailed logs for the deployment record and troubleshooting. |
 
 Foundry should open a local browser page. Connect MetaMask, confirm that its selected account is the

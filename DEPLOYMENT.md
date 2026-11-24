@@ -193,6 +193,9 @@ The deployer receives no tokens or token privilege and can be retired afterward.
 Ethereum cannot prove which type of device produced a valid signature. Hardware-wallet compliance
 must therefore be recorded and checked through the Foundation's operational process.
 
+Record the approved deployer's decimal nonce using `cast nonce` on the target RPC. The latest and
+pending nonces must agree. Use that recorded value for `EXPECTED_NONCE` in the command below.
+
 Before running the command, connect the approved Ledger or Trezor to MetaMask using MetaMask's
 hardware-wallet connection. Select the exact approved deployer account and intended Ethereum
 network. Never import or type the hardware wallet's recovery phrase or private key into MetaMask.
@@ -210,9 +213,6 @@ EXPECTED_NONCE="<RECORDED DEPLOYER NONCE>" \
 scripts/deploy.sh --browser -vvvv
 ```
 
-Record the approved deployer's decimal nonce before this command using `cast nonce` on the
-target RPC. The latest and pending nonces must agree. Use that recorded value for `EXPECTED_NONCE`.
-
 The wrapper rehearses with Forge, then estimates the exact creation data on the target network.
 It adds 15%, rounds up, and stops if the result exceeds 16,777,216 gas. It rechecks both nonces
 and uses Foundry 1.5.1's `cast send --browser` to request the same creation data with the
@@ -220,6 +220,11 @@ explicit chain, sender, nonce and calculated gas limit. Record the estimate, lim
 fork (where `eth_config` is supported). Reject a wallet request with a different limit or nonce.
 After mining, use `cast tx <HASH> --rpc-url <RPC>` to confirm the transaction's gas limit
 and nonce against the record. The receipt's gas used is a separate figure.
+
+Two things to expect when it runs. The rehearsal ends with Foundry's own local gas estimate and a
+hint to add `--broadcast`: ignore both, because the wrapper sends the transaction itself and the
+figures to record are the two it prints next, `Network gas estimate` and `Gas limit to sign`.
+Foundry 1.5.1's signer page lists a built-in Porto wallet beside MetaMask: choose MetaMask.
 
 The `--browser` option opens Foundry's local browser signer. Connect MetaMask when prompted;
 MetaMask will pass the signing request to its connected hardware wallet. Confirm that MetaMask is
